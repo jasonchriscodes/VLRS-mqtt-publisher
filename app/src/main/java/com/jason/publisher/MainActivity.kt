@@ -38,12 +38,10 @@ class MainActivity : AppCompatActivity() {
             val lastLocation: Location? = locationResult.lastLocation
             // Do something with the latest location here
             if (lastLocation != null) {
-                val latitude = lastLocation.latitude
-                val longitude = lastLocation.longitude
-                lat = latitude
-                lon = longitude
+                lat = lastLocation.latitude
+                lon = lastLocation.longitude
                 // Use latitude and longitude data according to your needs
-                textView.text = "$latitude, $longitude"
+                textView.text = "$lat, $lon"
             }
         }
     }
