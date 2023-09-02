@@ -1,4 +1,4 @@
-package com.ferdifir.navtrack
+package com.jason.publisher
 
 import android.content.pm.PackageManager
 import android.location.Location
@@ -6,13 +6,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.jason.publisher.R
 import com.google.android.gms.location.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence

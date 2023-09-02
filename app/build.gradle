@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.ferdifir.navtrack'
+    namespace 'com.jason.publisher'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.ferdifir.navtrack"
+        applicationId "com.jason.publisher"
         minSdk 21
         targetSdk 33
         versionCode 1

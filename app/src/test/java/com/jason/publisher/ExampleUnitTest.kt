@@ -1,4 +1,4 @@
-package com.ferdifir.navtrack
+package com.jason.publisher
 
 import org.junit.Test
 
