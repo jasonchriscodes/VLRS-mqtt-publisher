@@ -1,7 +1,12 @@
 package com.jason.publisher
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +14,8 @@ import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.jason.publisher.R
 import com.google.android.gms.location.*
@@ -26,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textView: TextView
     private var lat = 0.0
     private var lon = 0.0
+    private var CHANNEL_ID = "test"
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val locationRequest: LocationRequest = LocationRequest.create().apply {
         interval = 10000
@@ -99,12 +107,13 @@ class MainActivity : AppCompatActivity() {
         val options = MqttConnectOptions()
         //options.isCleanSession = true
         options.userName = username;
-        //options.
+        //options.willMessage
         //options.password = password
 
         connectMQTTClient(options)
 
         startSendingData()
+
     }
 
     private fun startSendingData() {
@@ -150,12 +159,49 @@ class MainActivity : AppCompatActivity() {
 
                 override fun deliveryComplete(token: IMqttDeliveryToken?) {
                     Log.d("Delivery Complete", "Message sent")
+                    showNotification()
                 }
 
             })
         } catch (e: MqttException) {
             e.printStackTrace()
         }
+    }
+
+    private fun showNotification() {
+        val notificationManageer = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "My Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManageer.createNotificationChannel(channel)
+        }
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Connected")
+            .setSmallIcon(R.drawable.ic_signal)
+            .setContentText("Latitude: $lat, Longitude: $lon")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(false)
+            .setSubText("Data Send")
+//        val notification = builder.build()
+//        notificationManageer.notify(1, notification)
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        NotificationManagerCompat.from(this).notify(1, builder.build())
     }
 
     private fun subscribeToTopic() {
