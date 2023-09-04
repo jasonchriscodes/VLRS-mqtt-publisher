@@ -50,6 +50,8 @@ class MainActivity : AppCompatActivity() {
     private var CHANNEL_ID = "test"
     private lateinit var mapController: MapController
     private lateinit var mapView: MapView
+//    private var location = GeoPoint(-36.8558509, 	174.7651136)
+    private var location = GeoPoint(0.0,0.0)
     private lateinit var sensorManager: SensorManager
     private var compassSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -74,7 +76,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delayInMillis: Long = 10000
+    private val delayInMillis: Long = 1000
 
     override fun onStart() {
         super.onStart()
@@ -136,11 +138,7 @@ class MainActivity : AppCompatActivity() {
 
         connectMQTTClient(options)
         startSendingData()
-        configMap()
-    }
 
-    private fun configMap() {
-        val location = GeoPoint(-36.8558509, 	174.7651136)
         with(mapView) {
             controller.animateTo(location)
             setMultiTouchControls(true)
@@ -149,6 +147,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         mapController = mapView.controller as MapController
+        configMap()
+    }
+
+    private fun configMap() {
         mapController.setCenter(location)
         mapController.zoomTo(15)
     }
@@ -156,7 +158,7 @@ class MainActivity : AppCompatActivity() {
     private fun setMarker() {
         val marker = Marker(mapView)
         marker.icon= resources.getDrawable(R.drawable.compass_calibration)
-        marker.position = GeoPoint(lat, lon)
+        marker.position = location
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         marker.rotation = -bearing
 
@@ -186,10 +188,13 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 // Submit data here
                 if (lat != 0.0 && lon != 0.0) {
+                    location = GeoPoint(lat, lon)
                     publishMessage("{\"latitude\":$lat, \"longitude\":$lon}")
                     textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
+                    configMap()
                     setMarker()
                 }
+                Log.d( "bearing", bearing.toString())
 
                 // Next data delivery schedule
                 handler.postDelayed(this, delayInMillis)
