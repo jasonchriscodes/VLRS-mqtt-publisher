@@ -17,6 +17,9 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
+import android.view.animation.Animation
+import android.view.animation.RotateAnimation
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -34,6 +37,7 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.compass.CompassOverlay
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,17 +48,23 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mqttClient: MqttClient
     private lateinit var textView: TextView
+    private lateinit var image: ImageView
     private var lat = 0.0
     private var lon = 0.0
-    private var bearing : Float = 0.0F
     private var CHANNEL_ID = "test"
     private lateinit var mapController: MapController
     private lateinit var mapView: MapView
-//    private var location = GeoPoint(-36.8558509, 	174.7651136)
+
     private var location = GeoPoint(0.0,0.0)
     private lateinit var marker : Marker
+
     private lateinit var sensorManager: SensorManager
+    private var bearing : Float = 0.0F
+    private var mAccelerometer = FloatArray(3)
+    private var mGeomagneic = FloatArray(3)
+    private var currentBearing = 0f
     private var compassSensor: Sensor? = null
+    private var acceleroSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val locationRequest: LocationRequest = LocationRequest.create().apply {
         interval = 10000
@@ -123,11 +133,13 @@ class MainActivity : AppCompatActivity() {
 
         textView = findViewById(R.id.textView)
         mapView = findViewById(R.id.map)
+        image = findViewById(R.id.image)
 
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         // Set up MQTT client
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
@@ -154,6 +166,7 @@ class MainActivity : AppCompatActivity() {
 
         setMarker()
         configMap()
+        testBearing()
     }
 
     private fun configMap() {
@@ -163,26 +176,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun setMarker() {
         marker.position = location
-        marker.rotation = -bearing
+        marker.rotation = bearing
         mapView.overlays.add(marker)
         mapView.invalidate()
     }
 
     override fun onResume() {
         super.onResume()
-        if (compassSensor != null) {
-            sensorManager.registerListener(
-                sensorListener,
-                compassSensor,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
-        }
+        sensorManager.registerListener(
+            sensorListener,
+            compassSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        sensorManager.registerListener(
+            sensorListener,
+            acceleroSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(sensorListener)
-
     }
 
     private fun startSendingData() {
@@ -191,7 +206,7 @@ class MainActivity : AppCompatActivity() {
                 // Submit data here
                 if (lat != 0.0 && lon != 0.0) {
                     location = GeoPoint(lat, lon)
-                    publishMessage("{\"latitude\":$lat, \"longitude\":$lon}")
+                    publishMessage("{\"latitude\":$lat, \"longitude\":$lon, \"bearing\":$bearing}")
                     textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
                     configMap()
                     setMarker()
@@ -202,6 +217,17 @@ class MainActivity : AppCompatActivity() {
                 handler.postDelayed(this, delayInMillis)
             }
         }, delayInMillis)
+    }
+
+    private fun testBearing() {
+        val rotateAnimation = RotateAnimation(
+            bearing,
+            bearing + 360f,
+            Animation.RELATIVE_TO_SELF, 0.5f,
+            Animation.RELATIVE_TO_SELF, 0.5f
+        )
+        rotateAnimation.repeatCount = Animation.INFINITE
+        image.startAnimation(rotateAnimation)
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
@@ -242,13 +268,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(p0: SensorEvent?) {
-            if (p0?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
-                val rotationMatrix = FloatArray(9)
-                val orientationvalues = FloatArray(3)
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, orientationvalues)
-                val azimuth = orientationvalues.toString()
-                Log.d("Azimuth", azimuth)
+        override fun onSensorChanged(event: SensorEvent?) {
+            val alpha = 0.97f
+            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
+                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
+                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
+            }
+            if (event!!.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
+                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
+                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
+            }
+            val R = FloatArray(9)
+            val I = FloatArray(9)
+            val isSuccess = SensorManager.getRotationMatrix(R, I, mAccelerometer, mGeomagneic)
+            if (isSuccess) {
+                val orientation = FloatArray(3)
+                SensorManager.getOrientation(R, orientation)
+                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+                bearing = (bearing + 360) % 360
+                testBearing()
             }
         }
 
