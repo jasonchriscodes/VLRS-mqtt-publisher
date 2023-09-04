@@ -5,11 +5,17 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.hardware.SensorManager.SENSOR_ORIENTATION
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.preference.PreferenceManager
 import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -21,6 +27,13 @@ import com.jason.publisher.R
 import com.google.android.gms.location.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.MapController
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,7 +46,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textView: TextView
     private var lat = 0.0
     private var lon = 0.0
+    private var bearing : Float = 0.0F
     private var CHANNEL_ID = "test"
+    private lateinit var mapController: MapController
+    private lateinit var mapView: MapView
+    private lateinit var sensorManager: SensorManager
+    private var compassSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val locationRequest: LocationRequest = LocationRequest.create().apply {
         interval = 10000
@@ -48,14 +66,15 @@ class MainActivity : AppCompatActivity() {
             if (lastLocation != null) {
                 lat = lastLocation.latitude
                 lon = lastLocation.longitude
+                bearing = lastLocation.bearing
                 // Use latitude and longitude data according to your needs
-                textView.text = "$lat, $lon"
+                textView.text = "$lat, $lon, $bearing"
             }
         }
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delayInMillis: Long = 1000
+    private val delayInMillis: Long = 10000
 
     override fun onStart() {
         super.onStart()
@@ -100,7 +119,12 @@ class MainActivity : AppCompatActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         textView = findViewById(R.id.textView)
+        mapView = findViewById(R.id.map)
 
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         // Set up MQTT client
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
@@ -111,8 +135,49 @@ class MainActivity : AppCompatActivity() {
         //options.password = password
 
         connectMQTTClient(options)
-
         startSendingData()
+        configMap()
+    }
+
+    private fun configMap() {
+        val location = GeoPoint(-36.8558509, 	174.7651136)
+        with(mapView) {
+            controller.animateTo(location)
+            setMultiTouchControls(true)
+            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+        }
+
+        mapController = mapView.controller as MapController
+        mapController.setCenter(location)
+        mapController.zoomTo(15)
+    }
+
+    private fun setMarker() {
+        val marker = Marker(mapView)
+        marker.icon= resources.getDrawable(R.drawable.compass_calibration)
+        marker.position = GeoPoint(lat, lon)
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        marker.rotation = -bearing
+
+        mapView.overlays.add(marker)
+        mapView.invalidate()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (compassSensor != null) {
+            sensorManager.registerListener(
+                sensorListener,
+                compassSensor,
+                SensorManager.SENSOR_DELAY_NORMAL
+            )
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(sensorListener)
 
     }
 
@@ -122,7 +187,8 @@ class MainActivity : AppCompatActivity() {
                 // Submit data here
                 if (lat != 0.0 && lon != 0.0) {
                     publishMessage("{\"latitude\":$lat, \"longitude\":$lon}")
-                    textView.text = "The most recent Coordinates sent\nLatitude: $lat\nLongitude: $lon"
+                    textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
+                    setMarker()
                 }
 
                 // Next data delivery schedule
@@ -168,6 +234,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(p0: SensorEvent?) {
+            if (p0?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
+                val rotationMatrix = FloatArray(9)
+                val orientationvalues = FloatArray(3)
+                SensorManager.getRotationMatrixFromVector(rotationMatrix, orientationvalues)
+                val azimuth = orientationvalues.toString()
+                Log.d("Azimuth", azimuth)
+            }
+        }
+
+        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+
+        }
+
+    }
+
     private fun showNotification() {
         val notificationManageer = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -185,8 +268,6 @@ class MainActivity : AppCompatActivity() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(false)
             .setSubText("Data Send")
-//        val notification = builder.build()
-//        notificationManageer.notify(1, notification)
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
