@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapView: MapView
 //    private var location = GeoPoint(-36.8558509, 	174.7651136)
     private var location = GeoPoint(0.0,0.0)
+    private lateinit var marker : Marker
     private lateinit var sensorManager: SensorManager
     private var compassSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -147,21 +148,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         mapController = mapView.controller as MapController
+        marker = Marker(mapView)
+        marker.icon= resources.getDrawable(R.drawable.compass_calibration)
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+
+        setMarker()
         configMap()
     }
 
     private fun configMap() {
         mapController.setCenter(location)
-        mapController.zoomTo(15)
+        mapController.zoomTo(20)
     }
 
     private fun setMarker() {
-        val marker = Marker(mapView)
-        marker.icon= resources.getDrawable(R.drawable.compass_calibration)
         marker.position = location
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         marker.rotation = -bearing
-
         mapView.overlays.add(marker)
         mapView.invalidate()
     }
