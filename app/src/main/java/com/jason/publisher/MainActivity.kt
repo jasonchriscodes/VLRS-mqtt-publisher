@@ -37,7 +37,9 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.compass.CompassOverlay
+import kotlin.concurrent.fixedRateTimer
 
 class MainActivity : AppCompatActivity() {
 
@@ -54,8 +56,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapController: MapController
     private lateinit var mapView: MapView
 
-    private var location = GeoPoint(0.0,0.0)
+    var index = 0
+    var data = Dummmy.listData[index]
+//    private var location = GeoPoint(0.0,0.0)
+    private var location = GeoPoint(data.latitude, data.longitude)
     private lateinit var marker : Marker
+    private lateinit var polyline: Polyline
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
@@ -86,7 +92,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delayInMillis: Long = 1000
+    private val delayInMillis: Long = 5000
 
     override fun onStart() {
         super.onStart()
@@ -147,9 +153,6 @@ class MainActivity : AppCompatActivity() {
         //options.willMessage
         //options.password = password
 
-        connectMQTTClient(options)
-        startSendingData()
-
         with(mapView) {
             controller.animateTo(location)
             setMultiTouchControls(true)
@@ -162,9 +165,14 @@ class MainActivity : AppCompatActivity() {
         marker.icon= resources.getDrawable(R.drawable.ic_car)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
+        polyline = Polyline(mapView)
+        mapView.overlayManager.add(polyline)
+
         setMarker()
         configMap()
         testBearing()
+        connectMQTTClient(options)
+        startSendingData()
     }
 
     private fun configMap() {
@@ -199,22 +207,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startSendingData() {
-        handler.postDelayed(object : Runnable {
-            override fun run() {
-                // Submit data here
-                if (lat != 0.0 && lon != 0.0) {
-                    location = GeoPoint(lat, lon)
-                    publishMessage("{\"latitude\":$lat, \"longitude\":$lon, \"bearing\":$bearing}")
-                    textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
+//        handler.postDelayed(object : Runnable {
+//            override fun run() {
+//                // Submit data here
+//                if (index < Dummmy.listData.size) {
+////                    location = GeoPoint(lat, lon)
+//                    location = GeoPoint(data.latitude, data.longitude)
+//                    polyline.addPoint(location)
+//                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
+//                    textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
+//                    configMap()
+//                    setMarker()
+//                    index++
+//                }
+//
+//                // Next data delivery schedule
+//                handler.postDelayed(this, delayInMillis)
+//            }
+//        }, delayInMillis)
+        fixedRateTimer(initialDelay = 1000, period = 1000) {
+            handler.post {
+                if (index < Dummmy.listData.size) {
+                    location = GeoPoint(data.latitude, data.longitude)
+                    polyline.addPoint(location)
+                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
+                    textView.text = "The most recent Coordinates\nLatitude: ${data.latitude}\nLongitude: ${data.longitude}\nBearing: $bearing"
                     configMap()
                     setMarker()
+                    index++
+                } else {
+                    cancel()
                 }
-                Log.d( "bearing", bearing.toString())
-
-                // Next data delivery schedule
-                handler.postDelayed(this, delayInMillis)
             }
-        }, delayInMillis)
+        }
     }
 
     private fun testBearing() {
