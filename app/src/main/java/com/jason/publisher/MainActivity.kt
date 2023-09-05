@@ -56,10 +56,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapController: MapController
     private lateinit var mapView: MapView
 
-    var index = 0
-    var data = Dummmy.listData[index]
 //    private var location = GeoPoint(0.0,0.0)
-    private var location = GeoPoint(data.latitude, data.longitude)
+//    private var location = GeoPoint(data.latitude, data.longitude)
     private lateinit var marker : Marker
     private lateinit var polyline: Polyline
 
@@ -98,7 +96,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         if (ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             fusedLocationClient.requestLocationUpdates(
@@ -109,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 LOCATION_PERMISSION_REQUEST_CODE
             )
         }
@@ -152,36 +150,72 @@ class MainActivity : AppCompatActivity() {
         options.userName = username;
         //options.willMessage
         //options.password = password
+        var index = 0
+        var data = Dummmy.listData
 
         with(mapView) {
-            controller.animateTo(location)
             setMultiTouchControls(true)
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
 
-        mapController = mapView.controller as MapController
         marker = Marker(mapView)
         marker.icon= resources.getDrawable(R.drawable.ic_car)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         polyline = Polyline(mapView)
-        mapView.overlayManager.add(polyline)
 
-        setMarker()
-        configMap()
-        testBearing()
-        connectMQTTClient(options)
-        startSendingData()
+        mapController = mapView.controller as MapController
+        val handler = Handler(Looper.getMainLooper())
+        val updateRunnable = object : Runnable {
+            override fun run() {
+                if (index < data.size) {
+                    var coordinate = data[index]
+
+                    val center = GeoPoint(-36.854790, 174.764690)
+                    mapController.animateTo(center)
+                    mapController.setCenter(center)
+                    mapController.setZoom(17)
+
+                    marker.position = coordinate
+                    marker.rotation = bearing
+                    mapView.overlays.add(marker)
+
+                    polyline.addPoint(coordinate)
+                    mapView.overlays.add(polyline)
+
+                    mapView.invalidate()
+                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
+                    index = (index + 1) % data.size
+                    handler.postDelayed(this, delayInMillis)
+                }
+            }
+        }
+        handler.post(updateRunnable)
+
+//        polyline = Polyline(mapView)
+//        storedPolyine.add(GeoPoint(data.latitude, data.longitude))
+//        polyline.setPoints(storedPolyine)
+//        val polylineOverlay = Polyl
+
+//        configMap()
+//        setMarker()
+//        testBearing()
+//        connectMQTTClient(options)
+//        startSendingData()
     }
 
+//    private fun setPolyline() {
+//        mapView.overlays.add(polyline)
+//    }
+
     private fun configMap() {
-        mapController.setCenter(location)
+        //mapController.setCenter(data)
         mapController.zoomTo(20)
     }
 
     private fun setMarker() {
-        marker.position = location
+        //marker.position = data
         marker.rotation = bearing
         mapView.overlays.add(marker)
         mapView.invalidate()
@@ -227,17 +261,17 @@ class MainActivity : AppCompatActivity() {
 //        }, delayInMillis)
         fixedRateTimer(initialDelay = 1000, period = 1000) {
             handler.post {
-                if (index < Dummmy.listData.size) {
-                    location = GeoPoint(data.latitude, data.longitude)
-                    polyline.addPoint(location)
-                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
-                    textView.text = "The most recent Coordinates\nLatitude: ${data.latitude}\nLongitude: ${data.longitude}\nBearing: $bearing"
-                    configMap()
-                    setMarker()
-                    index++
-                } else {
-                    cancel()
-                }
+//                if (index < Dummmy.listData.size) {
+////                    location = GeoPoint(data.latitude, data.longitude)
+//                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
+//                    textView.text = "The most recent Coordinates\nLatitude: ${data.latitude}\nLongitude: ${data.longitude}\nBearing: $bearing"
+//                    configMap()
+//                    setMarker()
+//                    index++
+//                } else {
+//                    cancel()
+//                }
+//                Log.d("index", index.toString())
             }
         }
     }
