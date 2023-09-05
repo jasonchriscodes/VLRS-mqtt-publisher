@@ -48,7 +48,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mqttClient: MqttClient
     private lateinit var textView: TextView
-    private lateinit var image: ImageView
     private var lat = 0.0
     private var lon = 0.0
     private var CHANNEL_ID = "test"
@@ -133,7 +132,6 @@ class MainActivity : AppCompatActivity() {
 
         textView = findViewById(R.id.textView)
         mapView = findViewById(R.id.map)
-        image = findViewById(R.id.image)
 
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
@@ -161,7 +159,7 @@ class MainActivity : AppCompatActivity() {
 
         mapController = mapView.controller as MapController
         marker = Marker(mapView)
-        marker.icon= resources.getDrawable(R.drawable.compass_calibration)
+        marker.icon= resources.getDrawable(R.drawable.ic_car)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         setMarker()
@@ -227,7 +225,7 @@ class MainActivity : AppCompatActivity() {
             Animation.RELATIVE_TO_SELF, 0.5f
         )
         rotateAnimation.repeatCount = Animation.INFINITE
-        image.startAnimation(rotateAnimation)
+        //image.startAnimation(rotateAnimation)
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
@@ -288,7 +286,7 @@ class MainActivity : AppCompatActivity() {
                 SensorManager.getOrientation(R, orientation)
                 bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
                 bearing = (bearing + 360) % 360
-                testBearing()
+                //testBearing()
             }
         }
 
