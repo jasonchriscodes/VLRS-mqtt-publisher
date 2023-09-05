@@ -221,7 +221,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun testBearing() {
         val rotateAnimation = RotateAnimation(
-            bearing,
+            -bearing,
             bearing + 360f,
             Animation.RELATIVE_TO_SELF, 0.5f,
             Animation.RELATIVE_TO_SELF, 0.5f

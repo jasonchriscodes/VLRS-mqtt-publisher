@@ -11,7 +11,8 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Koordinat terbaru yang dikirim\nLatiude: $lat\nLongitude: $lon"
+        android:text="The most recent Coordinates\nLatiude: $lat\nLongitude: $lon
+Bearing: $bearing"
         android:textAlignment="center"
         android:textColor="@color/black"
         android:textSize="30sp"
