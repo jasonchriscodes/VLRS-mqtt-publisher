@@ -37,7 +37,9 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.compass.CompassOverlay
+import kotlin.concurrent.fixedRateTimer
 
 class MainActivity : AppCompatActivity() {
 
@@ -54,8 +56,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapController: MapController
     private lateinit var mapView: MapView
 
-    private var location = GeoPoint(0.0,0.0)
+//    private var location = GeoPoint(0.0,0.0)
+//    private var location = GeoPoint(data.latitude, data.longitude)
     private lateinit var marker : Marker
+    private lateinit var polyline: Polyline
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
@@ -86,13 +90,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val delayInMillis: Long = 1000
+    private val delayInMillis: Long = 5000
 
     override fun onStart() {
         super.onStart()
         if (ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             fusedLocationClient.requestLocationUpdates(
@@ -103,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 LOCATION_PERMISSION_REQUEST_CODE
             )
         }
@@ -142,41 +146,53 @@ class MainActivity : AppCompatActivity() {
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
         val options = MqttConnectOptions()
-        //options.isCleanSession = true
         options.userName = username;
-        //options.willMessage
-        //options.password = password
-
         connectMQTTClient(options)
-        startSendingData()
+
+        var index = 0
+        var data = Dummmy.listData
 
         with(mapView) {
-            controller.animateTo(location)
             setMultiTouchControls(true)
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
 
-        mapController = mapView.controller as MapController
         marker = Marker(mapView)
         marker.icon= resources.getDrawable(R.drawable.ic_car)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
-        setMarker()
-        configMap()
-        testBearing()
-    }
+        polyline = Polyline(mapView)
 
-    private fun configMap() {
-        mapController.setCenter(location)
-        mapController.zoomTo(20)
-    }
+        mapController = mapView.controller as MapController
+        val handler = Handler(Looper.getMainLooper())
+        val updateRunnable = object : Runnable {
+            override fun run() {
+                if (index < data.size) {
+                    var coordinate = data[index]
 
-    private fun setMarker() {
-        marker.position = location
-        marker.rotation = bearing
-        mapView.overlays.add(marker)
-        mapView.invalidate()
+                    val center = GeoPoint(-36.854790, 174.764690)
+                    mapController.animateTo(center)
+                    mapController.setCenter(center)
+                    mapController.setZoom(17)
+
+                    marker.position = coordinate
+                    marker.rotation = bearing
+                    mapView.overlays.add(marker)
+
+                    polyline.addPoint(coordinate)
+                    mapView.overlays.add(polyline)
+
+                    mapView.invalidate()
+                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
+                    index = (index + 1) % data.size
+                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":$bearing}")
+                    handler.postDelayed(this, delayInMillis)
+                }
+            }
+        }
+        handler.post(updateRunnable)
+
     }
 
     override fun onResume() {
@@ -196,36 +212,6 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(sensorListener)
-    }
-
-    private fun startSendingData() {
-        handler.postDelayed(object : Runnable {
-            override fun run() {
-                // Submit data here
-                if (lat != 0.0 && lon != 0.0) {
-                    location = GeoPoint(lat, lon)
-                    publishMessage("{\"latitude\":$lat, \"longitude\":$lon, \"bearing\":$bearing}")
-                    textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
-                    configMap()
-                    setMarker()
-                }
-                Log.d( "bearing", bearing.toString())
-
-                // Next data delivery schedule
-                handler.postDelayed(this, delayInMillis)
-            }
-        }, delayInMillis)
-    }
-
-    private fun testBearing() {
-        val rotateAnimation = RotateAnimation(
-            -bearing,
-            bearing + 360f,
-            Animation.RELATIVE_TO_SELF, 0.5f,
-            Animation.RELATIVE_TO_SELF, 0.5f
-        )
-        rotateAnimation.repeatCount = Animation.INFINITE
-        //image.startAnimation(rotateAnimation)
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
