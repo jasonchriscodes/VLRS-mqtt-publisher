@@ -146,10 +146,9 @@ class MainActivity : AppCompatActivity() {
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
         val options = MqttConnectOptions()
-        //options.isCleanSession = true
         options.userName = username;
-        //options.willMessage
-        //options.password = password
+        connectMQTTClient(options)
+
         var index = 0
         var data = Dummmy.listData
 
@@ -187,38 +186,13 @@ class MainActivity : AppCompatActivity() {
                     mapView.invalidate()
                     Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
                     index = (index + 1) % data.size
+                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":$bearing}")
                     handler.postDelayed(this, delayInMillis)
                 }
             }
         }
         handler.post(updateRunnable)
 
-//        polyline = Polyline(mapView)
-//        storedPolyine.add(GeoPoint(data.latitude, data.longitude))
-//        polyline.setPoints(storedPolyine)
-//        val polylineOverlay = Polyl
-
-//        configMap()
-//        setMarker()
-//        testBearing()
-//        connectMQTTClient(options)
-//        startSendingData()
-    }
-
-//    private fun setPolyline() {
-//        mapView.overlays.add(polyline)
-//    }
-
-    private fun configMap() {
-        //mapController.setCenter(data)
-        mapController.zoomTo(20)
-    }
-
-    private fun setMarker() {
-        //marker.position = data
-        marker.rotation = bearing
-        mapView.overlays.add(marker)
-        mapView.invalidate()
     }
 
     override fun onResume() {
@@ -238,53 +212,6 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(sensorListener)
-    }
-
-    private fun startSendingData() {
-//        handler.postDelayed(object : Runnable {
-//            override fun run() {
-//                // Submit data here
-//                if (index < Dummmy.listData.size) {
-////                    location = GeoPoint(lat, lon)
-//                    location = GeoPoint(data.latitude, data.longitude)
-//                    polyline.addPoint(location)
-//                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
-//                    textView.text = "The most recent Coordinates\nLatitude: $lat\nLongitude: $lon\nBearing: $bearing"
-//                    configMap()
-//                    setMarker()
-//                    index++
-//                }
-//
-//                // Next data delivery schedule
-//                handler.postDelayed(this, delayInMillis)
-//            }
-//        }, delayInMillis)
-        fixedRateTimer(initialDelay = 1000, period = 1000) {
-            handler.post {
-//                if (index < Dummmy.listData.size) {
-////                    location = GeoPoint(data.latitude, data.longitude)
-//                    publishMessage("{\"latitude\":${data.latitude}, \"longitude\":${data.longitude}, \"bearing\":$bearing}")
-//                    textView.text = "The most recent Coordinates\nLatitude: ${data.latitude}\nLongitude: ${data.longitude}\nBearing: $bearing"
-//                    configMap()
-//                    setMarker()
-//                    index++
-//                } else {
-//                    cancel()
-//                }
-//                Log.d("index", index.toString())
-            }
-        }
-    }
-
-    private fun testBearing() {
-        val rotateAnimation = RotateAnimation(
-            -bearing,
-            bearing + 360f,
-            Animation.RELATIVE_TO_SELF, 0.5f,
-            Animation.RELATIVE_TO_SELF, 0.5f
-        )
-        rotateAnimation.repeatCount = Animation.INFINITE
-        //image.startAnimation(rotateAnimation)
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
