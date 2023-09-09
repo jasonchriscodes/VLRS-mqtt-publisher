@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity() {
                     val center = GeoPoint(-36.854790, 174.764690)
                     mapController.animateTo(center)
                     mapController.setCenter(center)
-                    mapController.setZoom(17)
+                    mapController.setZoom(16)
 
                     marker.position = coordinate
                     marker.rotation = bearing
@@ -325,7 +325,7 @@ class MainActivity : AppCompatActivity() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Connected")
             .setSmallIcon(R.drawable.ic_signal)
-            .setContentText("Lat: $lat, Long: $lon, \nDirection: $direction")
+            .setContentText("Lat: $lat, Long: $lon, Direction: $direction")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(false)
             .setSubText("Data Send")
