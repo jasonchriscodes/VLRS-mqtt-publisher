@@ -66,9 +66,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
+    private var direction : String? = null
     private var mAccelerometer = FloatArray(3)
     private var mGeomagneic = FloatArray(3)
-    private var currentBearing = 0f
     private var compassSensor: Sensor? = null
     private var acceleroSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
                 lon = lastLocation.longitude
                 bearing = lastLocation.bearing
                 // Use latitude and longitude data according to your needs
-                textView.text = "$lat, $lon, $bearing"
+                textView.text = "$lat, $lon, $bearing, $direction"
             }
         }
     }
@@ -198,7 +198,7 @@ class MainActivity : AppCompatActivity() {
                     mapView.invalidate()
                     Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
                     index = (index + 1) % data.size
-                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":$bearing}")
+                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
                     handler.postDelayed(this, delayInMillis)
                 }
             }
@@ -226,6 +226,22 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         // unregister sensor listeners when the activity is paused
         sensorManager.unregisterListener(sensorListener)
+    }
+
+    private fun bearingToDirection(bearingDegrees: Float): String {
+        val direction = when {
+            (bearingDegrees >= 337.5 || bearingDegrees < 22.5) -> "North"
+            (bearingDegrees >= 22.5 && bearingDegrees < 67.5) -> "Northeast"
+            (bearingDegrees >= 67.5 && bearingDegrees < 112.5) -> "East"
+            (bearingDegrees >= 112.5 && bearingDegrees < 157.5) -> "Southeast"
+            (bearingDegrees >= 157.5 && bearingDegrees < 202.5) -> "South"
+            (bearingDegrees >= 202.5 && bearingDegrees < 247.5) -> "Southwest"
+            (bearingDegrees >= 247.5 && bearingDegrees < 292.5) -> "West"
+            (bearingDegrees >= 292.5 && bearingDegrees < 337.5) -> "Northwest"
+            else -> "Invalid Bearing"
+        }
+
+        return direction
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
@@ -286,7 +302,7 @@ class MainActivity : AppCompatActivity() {
                 SensorManager.getOrientation(R, orientation)
                 bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
                 bearing = (bearing + 360) % 360
-                //testBearing()
+                direction = bearingToDirection(bearing)
             }
         }
 
@@ -309,7 +325,7 @@ class MainActivity : AppCompatActivity() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Connected")
             .setSmallIcon(R.drawable.ic_signal)
-            .setContentText("Latitude: $lat, Longitude: $lon")
+            .setContentText("Lat: $lat, Long: $lon, \nDirection: $direction")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(false)
             .setSubText("Data Send")
