@@ -1,5 +1,6 @@
 package com.jason.publisher
 
+// import statements
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -43,11 +44,13 @@ import kotlin.concurrent.fixedRateTimer
 
 class MainActivity : AppCompatActivity() {
 
+    // mqtt configuration
     private val brokerUrl = "tcp://43.226.218.94:1883"
     private val clientId = "jasonAndroidClientId"
     private val username = "cngz9qqls7dk5zgi3y4j"
     private val topic = "v1/devices/me/telemetry"
 
+    // mqtt client and other variables
     private lateinit var mqttClient: MqttClient
     private lateinit var textView: TextView
     private var lat = 0.0
@@ -94,11 +97,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        // check for location permission and request if not granted
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
+            // request location updates
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
@@ -113,6 +118,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // handle location permission request result
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -120,6 +126,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            // permission granted, you can proceed
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
             } else {
@@ -132,16 +139,21 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // intialize fused location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // initialize ui elements
         textView = findViewById(R.id.textView)
         mapView = findViewById(R.id.map)
 
+        // load map configuration
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
+        // initialize sensor manager and sensors
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
         // Set up MQTT client
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
@@ -197,6 +209,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // register sensor listeners for compass and accelerometer
         sensorManager.registerListener(
             sensorListener,
             compassSensor,
@@ -211,6 +224,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        // unregister sensor listeners when the activity is paused
         sensorManager.unregisterListener(sensorListener)
     }
 
@@ -223,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // callback function
+    // callback function to pusblish mqtt messages
     private fun publishMessage(msg: String) {
         try {
             val message = MqttMessage()
@@ -311,6 +325,7 @@ class MainActivity : AppCompatActivity() {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
+            // handle permission for post notifications here if needed
             return
         }
         NotificationManagerCompat.from(this).notify(1, builder.build())
