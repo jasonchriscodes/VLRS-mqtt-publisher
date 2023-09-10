@@ -10,7 +10,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.hardware.SensorManager.SENSOR_ORIENTATION
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -18,19 +17,17 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
-import android.view.animation.Animation
-import android.view.animation.RotateAnimation
-import android.widget.ImageView
-import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.jason.publisher.R
 import com.google.android.gms.location.*
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import org.json.JSONException
+import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -39,8 +36,9 @@ import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.compass.CompassOverlay
-import kotlin.concurrent.fixedRateTimer
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,7 +50,7 @@ class MainActivity : AppCompatActivity() {
 
     // mqtt client and other variables
     private lateinit var mqttClient: MqttClient
-    private lateinit var textView: TextView
+    // private lateinit var textView: TextView
     private var lat = 0.0
     private var lon = 0.0
     private var CHANNEL_ID = "test"
@@ -63,6 +61,7 @@ class MainActivity : AppCompatActivity() {
 //    private var location = GeoPoint(data.latitude, data.longitude)
     private lateinit var marker : Marker
     private lateinit var polyline: Polyline
+    private lateinit var data: Map<String, List<Coordinate>>
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
@@ -87,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                 lon = lastLocation.longitude
                 bearing = lastLocation.bearing
                 // Use latitude and longitude data according to your needs
-                textView.text = "$lat, $lon, $bearing, $direction"
+                // textView.text = "$lat, $lon, $bearing, $direction"
             }
         }
     }
@@ -143,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         // initialize ui elements
-        textView = findViewById(R.id.textView)
+        // textView = findViewById(R.id.textView)
         mapView = findViewById(R.id.map)
 
         // load map configuration
@@ -163,6 +162,7 @@ class MainActivity : AppCompatActivity() {
 
         var index = 0
         var data = Dummmy.listData
+        generatePolyline()
 
         with(mapView) {
             setMultiTouchControls(true)
@@ -205,6 +205,29 @@ class MainActivity : AppCompatActivity() {
         }
         handler.post(updateRunnable)
 
+    }
+    private fun generatePolyline() {
+        try {
+            val stream = assets.open("busRoute.json")
+            val size = stream.available()
+            val buffer = ByteArray(size)
+            stream.read(buffer)
+            stream.close()
+            val strContent = String(buffer, StandardCharsets.UTF_8)
+            try {
+                val jsonObject = JSONObject(strContent)
+                val jsonArrayResult = jsonObject.getJSONArray("1")
+                Log.d("Coordinate", jsonArrayResult.toString())
+            } catch (e: JSONException) {
+                e.printStackTrace()
+            }
+        } catch (ignored: IOException) {
+            Toast.makeText(
+                this@MainActivity,
+                "Oops, there is something wrong. Please try again.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onResume() {
