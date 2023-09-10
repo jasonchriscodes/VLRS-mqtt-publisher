@@ -24,6 +24,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
@@ -61,7 +63,7 @@ class MainActivity : AppCompatActivity() {
 //    private var location = GeoPoint(data.latitude, data.longitude)
     private lateinit var marker : Marker
     private lateinit var polyline: Polyline
-    private lateinit var data: Map<String, List<Coordinate>>
+    private lateinit var routeData: Map<String, List<Coordinate>>
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
@@ -169,41 +171,68 @@ class MainActivity : AppCompatActivity() {
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
+        val center = GeoPoint(-36.7892296,175.0415376)
 
-        marker = Marker(mapView)
-        marker.icon= resources.getDrawable(R.drawable.ic_car)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+//        marker = Marker(mapView)
+//        marker.icon= resources.getDrawable(R.drawable.ic_car)
+//        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         polyline = Polyline(mapView)
-
-        mapController = mapView.controller as MapController
-        val handler = Handler(Looper.getMainLooper())
-        val updateRunnable = object : Runnable {
-            override fun run() {
-                if (index < data.size) {
-                    var coordinate = data[index]
-
-                    val center = GeoPoint(-36.854790, 174.764690)
-                    mapController.animateTo(center)
-                    mapController.setCenter(center)
-                    mapController.setZoom(16)
-
-                    marker.position = coordinate
-                    marker.rotation = bearing
-                    mapView.overlays.add(marker)
-
-                    polyline.addPoint(coordinate)
-                    mapView.overlays.add(polyline)
-
-                    mapView.invalidate()
-                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
-                    index = (index + 1) % data.size
-                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
-                    handler.postDelayed(this, delayInMillis)
-                }
+        val routePolylineFrom = Polyline(mapView)
+        val routePolylineTo = Polyline(mapView)
+        var fromList = ArrayList<Int>()
+        var toList = ArrayList<Int>()
+        for (i in 1..8) {
+            fromList.add(i)
+        }
+        for (i in 9..18) {
+            toList.add(i)
+        }
+        for (index in fromList) {
+            routeData["$index"]?.forEach { position ->
+                routePolylineFrom.addPoint(GeoPoint(position.latitude,position.longitude))
             }
         }
-        handler.post(updateRunnable)
+        for (index in toList) {
+            routeData["$index"]?.forEach { position ->
+                routePolylineTo.addPoint(GeoPoint(position.latitude,position.longitude))
+            }
+        }
+
+        mapView.overlays.add(routePolylineFrom)
+        mapView.overlays.add(routePolylineTo)
+
+        mapController = mapView.controller as MapController
+        mapController.setCenter(center)
+        mapController.setZoom(16)
+        mapView.invalidate()
+//        val handler = Handler(Looper.getMainLooper())
+//        val updateRunnable = object : Runnable {
+//            override fun run() {
+//                if (index < data.size) {
+//                    var coordinate = data[index]
+//
+//                    val center = GeoPoint(-36.854790, 174.764690)
+////                    mapController.animateTo(center)
+////                    mapController.setCenter(center)
+//                    mapController.setZoom(16)
+//
+//                    marker.position = coordinate
+//                    marker.rotation = bearing
+//                    mapView.overlays.add(marker)
+//
+//                    polyline.addPoint(coordinate)
+//                    mapView.overlays.add(polyline)
+//
+//                    mapView.invalidate()
+//                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
+//                    index = (index + 1) % data.size
+//                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
+//                    handler.postDelayed(this, delayInMillis)
+//                }
+//            }
+//        }
+//        handler.post(updateRunnable)
 
     }
     private fun generatePolyline() {
@@ -215,9 +244,9 @@ class MainActivity : AppCompatActivity() {
             stream.close()
             val strContent = String(buffer, StandardCharsets.UTF_8)
             try {
-                val jsonObject = JSONObject(strContent)
-                val jsonArrayResult = jsonObject.getJSONArray("1")
-                Log.d("Coordinate", jsonArrayResult.toString())
+                val gson = Gson()
+                val typeToken = object : TypeToken<Map<String, List<Coordinate>>>() {}.type
+                routeData = gson.fromJson(strContent, typeToken)
             } catch (e: JSONException) {
                 e.printStackTrace()
             }
