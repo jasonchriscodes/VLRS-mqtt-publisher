@@ -182,10 +182,10 @@ class MainActivity : AppCompatActivity() {
         val routePolylineTo = Polyline(mapView)
         var fromList = ArrayList<Int>()
         var toList = ArrayList<Int>()
-        for (i in 1..8) {
+        for (i in 1..33) {
             fromList.add(i)
         }
-        for (i in 9..18) {
+        for (i in 34..81) {
             toList.add(i)
         }
         for (index in fromList) {
