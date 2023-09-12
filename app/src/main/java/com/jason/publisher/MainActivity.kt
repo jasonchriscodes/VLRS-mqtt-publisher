@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -36,7 +37,10 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.ItemizedIconOverlay
+import org.osmdroid.views.overlay.ItemizedOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
 import java.io.File
 import java.io.IOException
@@ -61,7 +65,7 @@ class MainActivity : AppCompatActivity() {
 
 //    private var location = GeoPoint(0.0,0.0)
 //    private var location = GeoPoint(data.latitude, data.longitude)
-    private lateinit var marker : Marker
+    //private lateinit var marker : Marker
     private lateinit var polyline: Polyline
     private lateinit var routeData: Map<String, List<Coordinate>>
 
@@ -164,6 +168,33 @@ class MainActivity : AppCompatActivity() {
 
         var index = 0
         var data = Dummmy.listData
+        var busStopList = mutableListOf(
+            GeoPoint(-36.781447, 175.006983),
+            GeoPoint(-36.783394, 175.010845),
+            GeoPoint(-36.797234,175.0324763)
+        )
+        var overlayItems = ArrayList<OverlayItem>()
+
+        busStopList.forEachIndexed { index, geoPoint ->
+            var marker = OverlayItem("Bus Stop ${index + 1}", "Description", geoPoint)
+//            marker.drawable = resources.getDrawable(R.drawable.ic_signal)
+            overlayItems.add(marker)
+        }
+
+        val overlayItem = ItemizedIconOverlay<OverlayItem>(overlayItems, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+            override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+                return true
+            }
+
+            override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                return false
+            }
+
+        }, applicationContext)
+        mapView.overlays.add(overlayItem)
+        //bus stop 1:-36.781447, 175.006983
+        //2:-36.783394, 175.010845
+        //3: -36.797234,175.0324763
         generatePolyline()
 
         with(mapView) {
@@ -171,7 +202,7 @@ class MainActivity : AppCompatActivity() {
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
-        val center = GeoPoint(-36.7892296,175.0415376)
+        val center = GeoPoint(-36.797158, 175.041309)
 
 //        marker = Marker(mapView)
 //        marker.icon= resources.getDrawable(R.drawable.ic_car)
@@ -180,14 +211,22 @@ class MainActivity : AppCompatActivity() {
         polyline = Polyline(mapView)
         val routePolylineFrom = Polyline(mapView)
         val routePolylineTo = Polyline(mapView)
+
         var fromList = ArrayList<Int>()
         var toList = ArrayList<Int>()
-        for (i in 1..33) {
+        for (i in 1..1) {
             fromList.add(i)
         }
-        for (i in 34..81) {
+        for (i in 2..2) {
             toList.add(i)
         }
+
+        // Set the color of the polyline (e.g., blue)
+        routePolylineFrom.color = android.graphics.Color.BLUE
+
+        // Set the color of the polyline (e.g., blue)
+        routePolylineTo.color = android.graphics.Color.RED
+
         for (index in fromList) {
             routeData["$index"]?.forEach { position ->
                 routePolylineFrom.addPoint(GeoPoint(position.latitude,position.longitude))
@@ -204,7 +243,7 @@ class MainActivity : AppCompatActivity() {
 
         mapController = mapView.controller as MapController
         mapController.setCenter(center)
-        mapController.setZoom(16)
+        mapController.setZoom(14)
         mapView.invalidate()
 //        val handler = Handler(Looper.getMainLooper())
 //        val updateRunnable = object : Runnable {
