@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
 
 //    private var location = GeoPoint(0.0,0.0)
 //    private var location = GeoPoint(data.latitude, data.longitude)
-    //private lateinit var marker : Marker
+    private lateinit var marker : Marker
     private lateinit var polyline: Polyline
     private lateinit var routeData: Map<String, List<Coordinate>>
 
@@ -227,13 +227,11 @@ class MainActivity : AppCompatActivity() {
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
-        val center = GeoPoint(-36.797158, 175.041309)
+        marker = Marker(mapView)
+        marker.icon= resources.getDrawable(R.drawable.ic_bus)
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
-//        marker = Marker(mapView)
-//        marker.icon= resources.getDrawable(R.drawable.ic_bus)
-//        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-        polyline = Polyline(mapView)
+        // polyline = Polyline(mapView)
         val routePolylineFrom = Polyline(mapView)
         val routePolylineTo = Polyline(mapView)
 
@@ -267,36 +265,32 @@ class MainActivity : AppCompatActivity() {
         mapView.overlays.add(routePolylineTo)
 
         mapController = mapView.controller as MapController
+        val center = GeoPoint(-36.797158, 175.041309)
         mapController.setCenter(center)
         mapController.setZoom(14)
-        mapView.invalidate()
-//        val handler = Handler(Looper.getMainLooper())
-//        val updateRunnable = object : Runnable {
-//            override fun run() {
-//                if (index < data.size) {
-//                    var coordinate = data[index]
-//
-//                    val center = GeoPoint(-36.854790, 174.764690)
-////                    mapController.animateTo(center)
-////                    mapController.setCenter(center)
-//                    mapController.setZoom(16)
-//
-//                    marker.position = coordinate
-//                    marker.rotation = bearing
-//                    mapView.overlays.add(marker)
-//
-//                    polyline.addPoint(coordinate)
-//                    mapView.overlays.add(polyline)
-//
-//                    mapView.invalidate()
-//                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
-//                    index = (index + 1) % data.size
-//                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
-//                    handler.postDelayed(this, delayInMillis)
-//                }
-//            }
-//        }
-//        handler.post(updateRunnable)
+        // mapView.invalidate()
+        val handler = Handler(Looper.getMainLooper())
+        val updateRunnable = object : Runnable {
+            override fun run() {
+                if (index < data.size) {
+                    var coordinate = data[index]
+
+                    marker.position = coordinate
+                    marker.rotation = bearing
+                    mapView.overlays.add(marker)
+
+                    // polyline.addPoint(coordinate)
+                    // mapView.overlays.add(polyline)
+
+                    mapView.invalidate()
+                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
+                    index = (index + 1) % data.size
+                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
+                    handler.postDelayed(this, delayInMillis)
+                }
+            }
+        }
+        handler.post(updateRunnable)
 
     }
 
@@ -446,9 +440,9 @@ class MainActivity : AppCompatActivity() {
             if (isSuccess) {
                 val orientation = FloatArray(3)
                 SensorManager.getOrientation(R, orientation)
-                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-                bearing = (bearing + 360) % 360
-                direction = bearingToDirection(bearing)
+//                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+//                bearing = (bearing + 360) % 360
+//                direction = bearingToDirection(bearing)
             }
         }
 
