@@ -1,15 +1,16 @@
 package com.jason.publisher
 
+// import statements
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.hardware.SensorManager.SENSOR_ORIENTATION
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -17,39 +18,50 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
-import android.view.animation.Animation
-import android.view.animation.RotateAnimation
-import android.widget.ImageView
-import android.widget.TextView
+import android.widget.Toast
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.Paint
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.jason.publisher.R
 import com.google.android.gms.location.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import org.json.JSONException
+import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.ItemizedIconOverlay
+import org.osmdroid.views.overlay.ItemizedOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.compass.CompassOverlay
-import kotlin.concurrent.fixedRateTimer
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
 
+    // mqtt configuration
     private val brokerUrl = "tcp://43.226.218.94:1883"
     private val clientId = "jasonAndroidClientId"
     private val username = "cngz9qqls7dk5zgi3y4j"
     private val topic = "v1/devices/me/telemetry"
 
+    // mqtt client and other variables
     private lateinit var mqttClient: MqttClient
-    private lateinit var textView: TextView
+    // private lateinit var textView: TextView
     private var lat = 0.0
     private var lon = 0.0
     private var CHANNEL_ID = "test"
@@ -58,14 +70,15 @@ class MainActivity : AppCompatActivity() {
 
 //    private var location = GeoPoint(0.0,0.0)
 //    private var location = GeoPoint(data.latitude, data.longitude)
-    private lateinit var marker : Marker
+    //private lateinit var marker : Marker
     private lateinit var polyline: Polyline
+    private lateinit var routeData: Map<String, List<Coordinate>>
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
+    private var direction : String? = null
     private var mAccelerometer = FloatArray(3)
     private var mGeomagneic = FloatArray(3)
-    private var currentBearing = 0f
     private var compassSensor: Sensor? = null
     private var acceleroSensor: Sensor? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -84,7 +97,7 @@ class MainActivity : AppCompatActivity() {
                 lon = lastLocation.longitude
                 bearing = lastLocation.bearing
                 // Use latitude and longitude data according to your needs
-                textView.text = "$lat, $lon, $bearing"
+                // textView.text = "$lat, $lon, $bearing, $direction"
             }
         }
     }
@@ -94,11 +107,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        // check for location permission and request if not granted
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
+            // request location updates
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
@@ -113,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // handle location permission request result
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -120,6 +136,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            // permission granted, you can proceed
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
             } else {
@@ -132,16 +149,21 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // intialize fused location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        textView = findViewById(R.id.textView)
+        // initialize ui elements
+        // textView = findViewById(R.id.textView)
         mapView = findViewById(R.id.map)
 
+        // load map configuration
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
+        // initialize sensor manager and sensors
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
         // Set up MQTT client
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
@@ -151,52 +173,188 @@ class MainActivity : AppCompatActivity() {
 
         var index = 0
         var data = Dummmy.listData
+        var busStopList = mutableListOf(
+            GeoPoint(-36.7803790629091, 174.99233253149978),
+            GeoPoint(-36.781390583365734,  175.0069988766529),
+            GeoPoint(-36.7833809573664,175.01085953338028),
+            GeoPoint(-36.798831305442754, 175.0344712359602),
+            GeoPoint(-36.79589493383375, 175.04736534425854),
+            GeoPoint(-36.80140942774004, 175.06578856597753),
+            GeoPoint(-36.801060986698346, 175.06972167622655),
+            GeoPoint(-36.7988708171856, 175.07526927783536),
+            GeoPoint(-36.78841923355155, 175.08308720758166),
+            GeoPoint(-36.8011013407773, 175.06983728488143),
+            GeoPoint(-36.80149048573887, 175.0661880120918),
+            GeoPoint(-36.81456058451561, 175.08249437425002),
+            GeoPoint(-36.80915689275718, 175.06174092840925),
+            GeoPoint(-36.79600806801311, 175.04828948305965),
+            GeoPoint(-36.79689036301606, 175.03242493729644),
+            GeoPoint(-36.783650668750916, 175.01138915873818),
+            GeoPoint(-36.79158652202191, 174.9993847004959),
+            GeoPoint(-36.78724309953361, 175.00125045277974),
+            GeoPoint(-36.7803790629091, 174.99233253149978),
+        )
+        var overlayItems = ArrayList<OverlayItem>()
+
+        busStopList.forEachIndexed { index, geoPoint ->
+            val busStopNumber = index + 1
+            val busStopSymbol = createBusStopSymbol(busStopNumber)
+            val marker = OverlayItem(
+                "Bus Stop $busStopNumber",
+                "Description",
+                geoPoint
+            )
+            marker.setMarker(busStopSymbol)
+            overlayItems.add(marker)
+        }
+
+        val overlayItem = ItemizedIconOverlay<OverlayItem>(overlayItems, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+            override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+                return true
+            }
+
+            override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                return false
+            }
+
+        }, applicationContext)
+        mapView.overlays.add(overlayItem)
+
+        generatePolyline()
 
         with(mapView) {
             setMultiTouchControls(true)
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
         }
+        val center = GeoPoint(-36.797158, 175.041309)
 
-        marker = Marker(mapView)
-        marker.icon= resources.getDrawable(R.drawable.ic_car)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+//        marker = Marker(mapView)
+//        marker.icon= resources.getDrawable(R.drawable.ic_bus)
+//        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         polyline = Polyline(mapView)
+        val routePolylineFrom = Polyline(mapView)
+        val routePolylineTo = Polyline(mapView)
 
-        mapController = mapView.controller as MapController
-        val handler = Handler(Looper.getMainLooper())
-        val updateRunnable = object : Runnable {
-            override fun run() {
-                if (index < data.size) {
-                    var coordinate = data[index]
+        var fromList = ArrayList<Int>()
+        var toList = ArrayList<Int>()
+        for (i in 1..1) {
+            fromList.add(i)
+        }
+        for (i in 2..2) {
+            toList.add(i)
+        }
 
-                    val center = GeoPoint(-36.854790, 174.764690)
-                    mapController.animateTo(center)
-                    mapController.setCenter(center)
-                    mapController.setZoom(17)
+        // Set the color of the polyline (e.g., blue)
+        routePolylineFrom.color = android.graphics.Color.BLUE
 
-                    marker.position = coordinate
-                    marker.rotation = bearing
-                    mapView.overlays.add(marker)
+        // Set the color of the polyline (e.g., blue)
+        routePolylineTo.color = android.graphics.Color.RED
 
-                    polyline.addPoint(coordinate)
-                    mapView.overlays.add(polyline)
-
-                    mapView.invalidate()
-                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
-                    index = (index + 1) % data.size
-                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":$bearing}")
-                    handler.postDelayed(this, delayInMillis)
-                }
+        for (index in fromList) {
+            routeData["$index"]?.forEach { position ->
+                routePolylineFrom.addPoint(GeoPoint(position.latitude,position.longitude))
             }
         }
-        handler.post(updateRunnable)
+        for (index in toList) {
+            routeData["$index"]?.forEach { position ->
+                routePolylineTo.addPoint(GeoPoint(position.latitude,position.longitude))
+            }
+        }
 
+        mapView.overlays.add(routePolylineFrom)
+        mapView.overlays.add(routePolylineTo)
+
+        mapController = mapView.controller as MapController
+        mapController.setCenter(center)
+        mapController.setZoom(14)
+        mapView.invalidate()
+//        val handler = Handler(Looper.getMainLooper())
+//        val updateRunnable = object : Runnable {
+//            override fun run() {
+//                if (index < data.size) {
+//                    var coordinate = data[index]
+//
+//                    val center = GeoPoint(-36.854790, 174.764690)
+////                    mapController.animateTo(center)
+////                    mapController.setCenter(center)
+//                    mapController.setZoom(16)
+//
+//                    marker.position = coordinate
+//                    marker.rotation = bearing
+//                    mapView.overlays.add(marker)
+//
+//                    polyline.addPoint(coordinate)
+//                    mapView.overlays.add(polyline)
+//
+//                    mapView.invalidate()
+//                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
+//                    index = (index + 1) % data.size
+//                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
+//                    handler.postDelayed(this, delayInMillis)
+//                }
+//            }
+//        }
+//        handler.post(updateRunnable)
+
+    }
+
+    private fun createBusStopSymbol(busStopNumber: Int): Drawable {
+        // Create a custom drawable with the bus stop number
+        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_bus_stop) as BitmapDrawable
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+
+        // Add the bus stop number to the right of the symbol
+        val textSize = 50f // Adjust the text size as needed
+        val paint = Paint().apply {
+            color = Color.RED // Set text color
+        }
+        val text = busStopNumber.toString()
+        val textWidth = paint.measureText(text)
+        val x = (canvas.width - textWidth).toFloat() // Adjust the horizontal position
+        val y = (canvas.height).toFloat() // Adjust the vertical position
+
+        canvas.drawText(text, x, y, paint)
+
+        return BitmapDrawable(resources, bitmap)
+    }
+
+
+    private fun generatePolyline() {
+        try {
+            val stream = assets.open("busRoute.json")
+            val size = stream.available()
+            val buffer = ByteArray(size)
+            stream.read(buffer)
+            stream.close()
+            val strContent = String(buffer, StandardCharsets.UTF_8)
+            try {
+                val gson = Gson()
+                val typeToken = object : TypeToken<Map<String, List<Coordinate>>>() {}.type
+                routeData = gson.fromJson(strContent, typeToken)
+            } catch (e: JSONException) {
+                e.printStackTrace()
+            }
+        } catch (ignored: IOException) {
+            Toast.makeText(
+                this@MainActivity,
+                "Oops, there is something wrong. Please try again.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        // register sensor listeners for compass and accelerometer
         sensorManager.registerListener(
             sensorListener,
             compassSensor,
@@ -211,7 +369,24 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        // unregister sensor listeners when the activity is paused
         sensorManager.unregisterListener(sensorListener)
+    }
+
+    private fun bearingToDirection(bearingDegrees: Float): String {
+        val direction = when {
+            (bearingDegrees >= 337.5 || bearingDegrees < 22.5) -> "North"
+            (bearingDegrees >= 22.5 && bearingDegrees < 67.5) -> "Northeast"
+            (bearingDegrees >= 67.5 && bearingDegrees < 112.5) -> "East"
+            (bearingDegrees >= 112.5 && bearingDegrees < 157.5) -> "Southeast"
+            (bearingDegrees >= 157.5 && bearingDegrees < 202.5) -> "South"
+            (bearingDegrees >= 202.5 && bearingDegrees < 247.5) -> "Southwest"
+            (bearingDegrees >= 247.5 && bearingDegrees < 292.5) -> "West"
+            (bearingDegrees >= 292.5 && bearingDegrees < 337.5) -> "Northwest"
+            else -> "Invalid Bearing"
+        }
+
+        return direction
     }
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
@@ -223,7 +398,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // callback function
+    // callback function to pusblish mqtt messages
     private fun publishMessage(msg: String) {
         try {
             val message = MqttMessage()
@@ -272,7 +447,7 @@ class MainActivity : AppCompatActivity() {
                 SensorManager.getOrientation(R, orientation)
                 bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
                 bearing = (bearing + 360) % 360
-                //testBearing()
+                direction = bearingToDirection(bearing)
             }
         }
 
@@ -295,7 +470,7 @@ class MainActivity : AppCompatActivity() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Connected")
             .setSmallIcon(R.drawable.ic_signal)
-            .setContentText("Latitude: $lat, Longitude: $lon")
+            .setContentText("Lat: $lat, Long: $lon, Direction: $direction")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(false)
             .setSubText("Data Send")
@@ -311,6 +486,7 @@ class MainActivity : AppCompatActivity() {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
+            // handle permission for post notifications here if needed
             return
         }
         NotificationManagerCompat.from(this).notify(1, builder.build())
