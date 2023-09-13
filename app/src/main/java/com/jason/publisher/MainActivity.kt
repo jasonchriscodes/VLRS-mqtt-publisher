@@ -38,6 +38,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.Distance
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var sensorManager: SensorManager
     private var bearing : Float = 0.0F
+    private var speed: Double = 0.0
     private var direction : String? = null
     private var mAccelerometer = FloatArray(3)
     private var mGeomagneic = FloatArray(3)
@@ -279,13 +281,15 @@ class MainActivity : AppCompatActivity() {
                     marker.rotation = bearing
                     mapView.overlays.add(marker)
 
-                    // polyline.addPoint(coordinate)
-                    // mapView.overlays.add(polyline)
+                    if (index != 0) {
+                        var secondCoordinate = data[index - 1]
+                        calculateSpeed(coordinate.latitude, coordinate.longitude, secondCoordinate.latitude, secondCoordinate.longitude)
+                    }
 
                     mapView.invalidate()
                     Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
                     index = (index + 1) % data.size
-                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction}}")
+                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction},  \"speed\":${speed}}")
                     handler.postDelayed(this, delayInMillis)
                 }
             }
@@ -294,6 +298,30 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun calculateSpeed(
+        firstLat: Double,
+        firstLong: Double,
+        secondLat: Double,
+        secondLong: Double
+    ) {
+        val distance = haversine(firstLat, firstLong, secondLat, secondLong)
+//        var distance = Distance.getSquaredDistanceToPoint(firstLat, firstLong, secondLat, secondLong)
+//        distance = Math.sqrt(distance)
+
+        speed = distance * 1000 / (delayInMillis / 1000)
+        Log.d("Distance", distance.toString())
+        Log.d("Speed", speed.toString())
+    }
+
+    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val deltaLat = Math.toRadians(lat2 - lat1)
+        val deltaLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return 6371 * c // Radius of the Earth in kilometers
+    }
     private fun createBusStopSymbol(busStopNumber: Int): Drawable {
         // Create a custom drawable with the bus stop number
         val drawable = ContextCompat.getDrawable(this, R.drawable.ic_bus_stop) as BitmapDrawable
