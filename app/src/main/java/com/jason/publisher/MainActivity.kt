@@ -440,9 +440,9 @@ class MainActivity : AppCompatActivity() {
             if (isSuccess) {
                 val orientation = FloatArray(3)
                 SensorManager.getOrientation(R, orientation)
-//                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-//                bearing = (bearing + 360) % 360
-//                direction = bearingToDirection(bearing)
+                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+                bearing = (bearing + 360) % 360
+                direction = bearingToDirection(bearing)
             }
         }
 
