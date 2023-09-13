@@ -19,6 +19,11 @@ import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
 import android.widget.Toast
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.Paint
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -169,15 +174,37 @@ class MainActivity : AppCompatActivity() {
         var index = 0
         var data = Dummmy.listData
         var busStopList = mutableListOf(
-            GeoPoint(-36.781447, 175.006983),
-            GeoPoint(-36.783394, 175.010845),
-            GeoPoint(-36.797234,175.0324763)
+            GeoPoint(-36.7803790629091, 174.99233253149978),
+            GeoPoint(-36.781390583365734,  175.0069988766529),
+            GeoPoint(-36.7833809573664,175.01085953338028),
+            GeoPoint(-36.798831305442754, 175.0344712359602),
+            GeoPoint(-36.79589493383375, 175.04736534425854),
+            GeoPoint(-36.80140942774004, 175.06578856597753),
+            GeoPoint(-36.801060986698346, 175.06972167622655),
+            GeoPoint(-36.7988708171856, 175.07526927783536),
+            GeoPoint(-36.78841923355155, 175.08308720758166),
+            GeoPoint(-36.8011013407773, 175.06983728488143),
+            GeoPoint(-36.80149048573887, 175.0661880120918),
+            GeoPoint(-36.81456058451561, 175.08249437425002),
+            GeoPoint(-36.80915689275718, 175.06174092840925),
+            GeoPoint(-36.79600806801311, 175.04828948305965),
+            GeoPoint(-36.79689036301606, 175.03242493729644),
+            GeoPoint(-36.783650668750916, 175.01138915873818),
+            GeoPoint(-36.79158652202191, 174.9993847004959),
+            GeoPoint(-36.78724309953361, 175.00125045277974),
+            GeoPoint(-36.7803790629091, 174.99233253149978),
         )
         var overlayItems = ArrayList<OverlayItem>()
 
         busStopList.forEachIndexed { index, geoPoint ->
-            var marker = OverlayItem("Bus Stop ${index + 1}", "Description", geoPoint)
-//            marker.drawable = resources.getDrawable(R.drawable.ic_signal)
+            val busStopNumber = index + 1
+            val busStopSymbol = createBusStopSymbol(busStopNumber)
+            val marker = OverlayItem(
+                "Bus Stop $busStopNumber",
+                "Description",
+                geoPoint
+            )
+            marker.setMarker(busStopSymbol)
             overlayItems.add(marker)
         }
 
@@ -192,9 +219,7 @@ class MainActivity : AppCompatActivity() {
 
         }, applicationContext)
         mapView.overlays.add(overlayItem)
-        //bus stop 1:-36.781447, 175.006983
-        //2:-36.783394, 175.010845
-        //3: -36.797234,175.0324763
+
         generatePolyline()
 
         with(mapView) {
@@ -205,7 +230,7 @@ class MainActivity : AppCompatActivity() {
         val center = GeoPoint(-36.797158, 175.041309)
 
 //        marker = Marker(mapView)
-//        marker.icon= resources.getDrawable(R.drawable.ic_car)
+//        marker.icon= resources.getDrawable(R.drawable.ic_bus)
 //        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         polyline = Polyline(mapView)
@@ -274,6 +299,35 @@ class MainActivity : AppCompatActivity() {
 //        handler.post(updateRunnable)
 
     }
+
+    private fun createBusStopSymbol(busStopNumber: Int): Drawable {
+        // Create a custom drawable with the bus stop number
+        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_bus_stop) as BitmapDrawable
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+
+        // Add the bus stop number to the right of the symbol
+        val textSize = 50f // Adjust the text size as needed
+        val paint = Paint().apply {
+            color = Color.RED // Set text color
+        }
+        val text = busStopNumber.toString()
+        val textWidth = paint.measureText(text)
+        val x = (canvas.width - textWidth).toFloat() // Adjust the horizontal position
+        val y = (canvas.height).toFloat() // Adjust the vertical position
+
+        canvas.drawText(text, x, y, paint)
+
+        return BitmapDrawable(resources, bitmap)
+    }
+
+
     private fun generatePolyline() {
         try {
             val stream = assets.open("busRoute.json")
