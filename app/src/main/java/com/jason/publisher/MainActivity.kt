@@ -313,19 +313,20 @@ class MainActivity : AppCompatActivity() {
         drawable.draw(canvas)
 
         // Add the bus stop number to the right of the symbol
-        val textSize = 50f // Adjust the text size as needed
+        val textSize = 60f // Adjust the text size as needed
         val paint = Paint().apply {
             color = Color.RED // Set text color
         }
         val text = busStopNumber.toString()
-        val textWidth = paint.measureText(text)
-        val x = (canvas.width - textWidth).toFloat() // Adjust the horizontal position
-        val y = (canvas.height).toFloat() // Adjust the vertical position
+        val x = (canvas.width - paint.measureText(text)) / 2 // Adjust the horizontal position to center the text
+        val y = canvas.height - 20f // Adjust the vertical position to position the text below the symbol
 
         canvas.drawText(text, x, y, paint)
 
         return BitmapDrawable(resources, bitmap)
     }
+
+
 
 
     private fun generatePolyline() {
