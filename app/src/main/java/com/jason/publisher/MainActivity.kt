@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jason.publisher.databinding.ActivityMainBinding
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
 
     // mqtt client and other variables
     private lateinit var mqttClient: MqttClient
+    private lateinit var binding: ActivityMainBinding
     // private lateinit var textView: TextView
     private var lat = 0.0
     private var lon = 0.0
@@ -149,6 +151,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         setContentView(R.layout.activity_main)
 
         // intialize fused location client
@@ -295,6 +299,24 @@ class MainActivity : AppCompatActivity() {
             }
         }
         handler.post(updateRunnable)
+
+        //mqttManager = MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "mapAndroidClientId")
+
+//        mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
+//            runOnUiThread {
+//                binding.textview.text = message
+//            }
+//        }
+
+        binding.button.setOnClickListener {
+            val message = MqttMessage()
+            val jsonObject = JSONObject()
+            jsonObject.put("sharedKeys","busRoute")
+//            "{"sharedKeys": "busRoute"}"
+            val jsonString = jsonObject.toString()
+            message.payload = jsonString.toByteArray()
+            mqttClient.publish("v1/devices/me/attributes/request/1", message)
+        }
 
     }
 
@@ -517,7 +539,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun subscribeToTopic() {
         try {
-            mqttClient.subscribe(topic)
+            mqttClient.subscribe(topic) { topic, message ->
+                val msg = message?.payload?.toString()
+                binding.textview.text = msg + topic
+                Log.d("LOCATION", msg!!)
+            }
+            mqttClient.subscribe("v1/devices/me/attributes/response/+") { topic, message ->
+                val msg = message?.payload?.toString()
+                binding.textview.text = msg + topic
+                Log.d("LOCATION", msg!!)
+            }
         } catch (e: MqttException) {
             e.printStackTrace()
         }
