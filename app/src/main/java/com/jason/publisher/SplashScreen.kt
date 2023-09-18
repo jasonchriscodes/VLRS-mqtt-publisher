@@ -24,7 +24,7 @@ class SplashScreen : AppCompatActivity() {
 
         binding.button.setOnClickListener {
             val jsonObject = JSONObject()
-            jsonObject.put("sharedKeys","busRoute")
+            jsonObject.put("sharedKeys","busRoute, busStop")
             val jsonString = jsonObject.toString()
             mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
         }
@@ -32,6 +32,7 @@ class SplashScreen : AppCompatActivity() {
         binding.textview.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
+            finish()
         }
     }
 
