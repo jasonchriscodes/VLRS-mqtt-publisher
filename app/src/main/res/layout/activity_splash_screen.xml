@@ -6,13 +6,18 @@
     android:layout_height="match_parent"
     tools:context=".SplashScreen">
 
+    <!-- A ScrollView allows scrolling if the content doesn't fit within the screen. -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
+        <!-- A LinearLayout to hold vertical content. -->
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+
+            <!-- TextView to display text content. -->
             <TextView
                 android:id="@+id/textview"
                 android:layout_width="wrap_content"
@@ -22,6 +27,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
+            <!-- Button to trigger actions. -->
             <Button
                 android:id="@+id/button"
                 android:layout_width="wrap_content"

@@ -14,14 +14,17 @@ class SplashScreen : AppCompatActivity() {
         binding = ActivitySplashScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // initialize the MQTT amanger with server URI and client ID
         mqttManager = MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
 
+        // subscribe to a MQTT topic for attribute responses and update UI accordingly
         mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
             runOnUiThread {
                 binding.textview.text = message
             }
         }
 
+        // set a click listener for a button to publish a JSON message
         binding.button.setOnClickListener {
             val jsonObject = JSONObject()
             jsonObject.put("sharedKeys","busRoute,busStop")
@@ -29,6 +32,7 @@ class SplashScreen : AppCompatActivity() {
             mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
         }
 
+        // set a click listener for a TextView to navigate to the MainActivity
         binding.textview.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
@@ -37,6 +41,7 @@ class SplashScreen : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // disconnect MQTT manager when the activity is destroyed
         mqttManager.disconnect()
     }
 }

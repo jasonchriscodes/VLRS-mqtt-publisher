@@ -18,10 +18,11 @@ class MqttManager(serverUri: String, clientId: String) {
         connectOptions.connectionTimeout = 10
         connectOptions.keepAliveInterval = 60
         try {
+            // connect to the MQTT broker when an instance of MqttManager is created
             mqttClient.connect(connectOptions)
         } catch (e: MqttException) {
             Log.d("MqttManager", "Failed to connect to MQTT broker: ${e.message}")
-            // Handle the exception according to your app's requirements
+            // handle the exception according to your app's requirements
         }
     }
 
@@ -32,7 +33,7 @@ class MqttManager(serverUri: String, clientId: String) {
             mqttClient.publish(topic, mqttMessage)
         } catch (e: MqttException) {
             Log.d("MqttManager", "Failed to publish message: ${e.message}")
-            // Handle the exception according to your app's requirements
+            // handle the exception according to your app's requirements
         }
     }
 
@@ -43,6 +44,7 @@ class MqttManager(serverUri: String, clientId: String) {
         }
     }
 
+    // disconnect from the MQTT broker
     fun disconnect() {
         mqttClient.disconnect()
     }
