@@ -1,7 +1,7 @@
 package com.jason.publisher
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
-import com.jason.publisher.databinding.ActivityContactsBinding
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -17,12 +17,18 @@ import com.jason.publisher.Fragments.SettingsFragment
 
 
 class ContactActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityContactsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityContactsBinding.inflate(layoutInflater)
         setContentView(R.layout.activity_contacts)
-        setSupportActionBar(binding.toolbarMain)
+
+        val toolbar : Toolbar = findViewById(R.id.toolbar_main)
+        setSupportActionBar(toolbar)
+        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener{
+            val homeIntent = Intent(this, MainActivity::class.java)
+            startActivity(homeIntent)
+            finish()
+        }
 
         val tabLayout: TabLayout = findViewById(R.id.tab_layout)
         val viewPager: ViewPager = findViewById(R.id.view_pager)
@@ -42,10 +48,15 @@ class ContactActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+        when (item.itemId) {
+            R.id.action_back -> {
+                val homeIntent = Intent(this, MainActivity::class.java)
+                startActivity(homeIntent)
+
+                return true
+            }
         }
+        return false
     }
 
     internal class ViewPagerAdapter(fragmentManager: FragmentManager) : FragmentPagerAdapter(fragmentManager, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {

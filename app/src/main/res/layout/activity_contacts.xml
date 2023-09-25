@@ -9,8 +9,10 @@
     tools:context="com.jason.publisher.ContactActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/toolbar_home"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="?attr/colorPrimaryDark"
         android:theme="@style/Theme.AppBarOverlay">
 
     <androidx.appcompat.widget.Toolbar
@@ -20,7 +22,6 @@
         android:background="?attr/colorPrimary"
      app:popupTheme="@style/Theme.PopupOverlay">
 
-        
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/profile_image"
         android:layout_width="32dp"
