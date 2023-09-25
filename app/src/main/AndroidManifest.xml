@@ -21,6 +21,9 @@
         android:theme="@style/Theme.NavTrack"
         tools:targetApi="31">
         <activity
+            android:name=".chat.ChatActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="false" />
 
@@ -40,10 +43,7 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
-        <activity
-            android:name=".ContactActivity">
-        </activity>
-
+        <activity android:name=".ContactActivity"></activity>
     </application>
 
 </manifest>

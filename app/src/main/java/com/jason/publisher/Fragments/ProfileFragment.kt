@@ -10,8 +10,7 @@ import com.jason.publisher.R
 /**
  * A simple [Fragment] subclass.
  */
-class ChatsFragment : Fragment() {
-
+class ProfileFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
