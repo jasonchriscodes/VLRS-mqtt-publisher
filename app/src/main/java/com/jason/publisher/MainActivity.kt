@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setContentView(R.layout.activity_main)
+//        setSupportActionBar(binding.toolbarMain)
 
         // Find the chat button by its ID
         val chatButton = findViewById<FloatingActionButton>(R.id.chatButton)
@@ -152,8 +153,9 @@ class MainActivity : AppCompatActivity() {
         chatButton.setOnClickListener {
             // Replace this with your code to open a chat activity or fragment
             // For example, you can start a new activity for chat:
-            val intent = Intent(this, ContactActivity::class.java)
-            startActivity(intent)
+            val contactIntent = Intent(this, ContactActivity::class.java)
+            startActivity(contactIntent)
+            Log.d("chat button","test")
         }
 
         // intialize fused location client

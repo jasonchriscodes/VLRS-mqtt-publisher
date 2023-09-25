@@ -1,6 +1,7 @@
 package com.jason.publisher
 
 import androidx.appcompat.app.AppCompatActivity
+import com.jason.publisher.databinding.ActivityContactsBinding
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -16,14 +17,12 @@ import com.jason.publisher.Fragments.SettingsFragment
 
 
 class ContactActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityContactsBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityContactsBinding.inflate(layoutInflater)
         setContentView(R.layout.activity_contacts)
-//        setSupportActionBar(toolbar_main)
-
-        val toolbar: Toolbar = findViewById(R.id.toolbar_main)
-        setSupportActionBar(toolbar)
-        supportActionBar!!.title = ""
+        setSupportActionBar(binding.toolbarMain)
 
         val tabLayout: TabLayout = findViewById(R.id.tab_layout)
         val viewPager: ViewPager = findViewById(R.id.view_pager)

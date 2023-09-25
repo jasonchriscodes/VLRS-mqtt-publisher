@@ -11,14 +11,15 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
+        android:theme="@style/Theme.AppBarOverlay">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar_main"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
-     app:popupTheme="@style/AppTheme.PopupOverlay">
+     app:popupTheme="@style/Theme.PopupOverlay">
+
         
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/profile_image"
@@ -49,14 +50,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorPrimaryDark"
-        app:tabIndicatorColor="@android:color/white">
+        app:tabIndicatorColor="@android:color/white"
+        android:contentDescription="Tab Option">
 
     </com.google.android.material.tabs.TabLayout>
 
     <androidx.viewpager.widget.ViewPager
         android:id="@+id/view_pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:contentDescription="gesture navigation">
 
     </androidx.viewpager.widget.ViewPager>
 

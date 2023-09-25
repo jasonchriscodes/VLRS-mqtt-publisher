@@ -12,6 +12,7 @@
         android:text="Account Settings"
         android:gravity="center"
         android:textStyle="bold"
+        android:textColor="@android:color/white"
         />
 
 </RelativeLayout>
