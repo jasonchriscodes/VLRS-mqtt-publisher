@@ -7,10 +7,16 @@
     tools:context=".chat.ChatFragment">
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/tab_toolbar"
+        android:id="@+id/search_toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"/>
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/tab_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/search_toolbar"/>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/view_pager"
