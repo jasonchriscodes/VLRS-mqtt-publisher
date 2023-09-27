@@ -8,11 +8,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayoutMediator
 import com.jason.publisher.AdapterClasses.SectionsPagerAdapter
+import com.jason.publisher.R
 import com.jason.publisher.databinding.FragmentContentBinding
 
 class ContentFragment : Fragment() {
     private var _binding: FragmentContentBinding? = null
     private val binding get() = _binding!!
+    private var isSearch = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -30,6 +32,19 @@ class ContentFragment : Fragment() {
         TabLayoutMediator(binding.tabs, binding.viewPager) { tab, position ->
             tab.text = TAB_TITLES[position]
         }.attach()
+
+        binding.btnSearch.setOnClickListener {
+            isSearch = !isSearch
+            if (isSearch) {
+                binding.tvTitle.visibility = View.GONE
+                binding.etSearch.visibility = View.VISIBLE
+                binding.btnSearch.setImageResource(R.drawable.ic_blank)
+            } else {
+                binding.tvTitle.visibility = View.VISIBLE
+                binding.etSearch.visibility = View.GONE
+                binding.btnSearch.setImageResource(R.drawable.ic_search)
+            }
+        }
     }
 
     override fun onDestroyView() {

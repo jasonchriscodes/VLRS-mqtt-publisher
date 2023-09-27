@@ -47,9 +47,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.9"
-        android:contentDescription="NULL" />
+        android:contentDescription="NULL"
+        app:backgroundTint="?attr/colorPrimary" />
+        />
 
-<!--    <ImageView-->
+
+    <!--    <ImageView-->
 <!--        android:id="@+id/image"-->
 <!--        android:layout_width="100dp"-->
 <!--        android:layout_height="100dp"-->
