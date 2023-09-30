@@ -9,9 +9,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.jason.publisher.AdapterClasses.ChatAdapter
 import com.jason.publisher.databinding.FragmentChatBinding
 
-class ChatFragment(private var chatList : ArrayList<Chat>) : Fragment() {
+class ChatFragment : Fragment() {
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
+    private var chatList = ArrayList<Chat>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
