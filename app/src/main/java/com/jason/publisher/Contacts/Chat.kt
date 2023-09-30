@@ -1,4 +1,4 @@
-package com.jason.publisher.chat
+package com.jason.publisher.Contacts
 
 data class Chat(
     val message: String,

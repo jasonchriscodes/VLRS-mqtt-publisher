@@ -1,9 +1,9 @@
-package com.jason.publisher.chat
+package com.jason.publisher.Contacts
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.jason.publisher.Fragments.ContentFragment
-import com.jason.publisher.Fragments.DetailFragment
+import com.jason.publisher.Chats.ContentFragment
+import com.jason.publisher.Chats.DetailFragment
 import com.jason.publisher.R
 import com.jason.publisher.databinding.ActivityChatBinding
 

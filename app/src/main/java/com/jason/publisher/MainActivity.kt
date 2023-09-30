@@ -34,7 +34,7 @@ import com.google.android.gms.location.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.jason.publisher.chat.ChatActivity
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence

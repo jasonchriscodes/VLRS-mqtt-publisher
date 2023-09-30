@@ -3,7 +3,7 @@ package com.jason.publisher.AdapterClasses
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.jason.publisher.chat.Chat
+import com.jason.publisher.Contacts.Chat
 import com.jason.publisher.databinding.ItemListChatBinding
 
 class ChatAdapter(private val dataList: ArrayList<Chat>): RecyclerView.Adapter<ChatAdapter.ListViewHolder>() {

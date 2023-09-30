@@ -1,4 +1,4 @@
-package com.jason.publisher.Fragments
+package com.jason.publisher.Chats
 
 import android.os.Bundle
 import android.view.LayoutInflater

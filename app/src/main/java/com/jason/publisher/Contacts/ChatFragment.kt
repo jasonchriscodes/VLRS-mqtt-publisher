@@ -1,4 +1,4 @@
-package com.jason.publisher.chat
+package com.jason.publisher.Contacts
 
 import android.os.Bundle
 import android.view.LayoutInflater
