@@ -5,6 +5,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.hardware.Sensor
@@ -30,26 +31,24 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
-import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.Distance
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.ItemizedIconOverlay
-import org.osmdroid.views.overlay.ItemizedOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
-import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 
@@ -146,6 +145,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setContentView(R.layout.activity_main)
+//        setSupportActionBar(binding.toolbarMain)
+
+        // Find the chat button by its ID
+        val chatButton = findViewById<FloatingActionButton>(R.id.chatButton)
+
+        // Set an OnClickListener to open a blank canvas or start a chat activity
+        chatButton.setOnClickListener {
+            // Replace this with your code to open a chat activity or fragment
+            // For example, you can start a new activity for chat:
+            val contactIntent = Intent(this, ChatActivity::class.java)
+            startActivity(contactIntent)
+            Log.d("chat button","test")
+        }
 
         // intialize fused location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)

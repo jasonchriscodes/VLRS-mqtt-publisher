@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:id="@+id/custom_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent"
+        android:background="?attr/colorPrimary">
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginStart="20dp">
+
+            <View
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/circle_background"/>
+
+            <ImageView
+                android:id="@+id/profile_image"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_profile"
+                android:layout_gravity="center"
+                android:layout_margin="5dp"/>
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/image_offline"
+                android:layout_width="13dp"
+                android:layout_height="13dp"
+                app:civ_border_width="12dp"
+                app:civ_border_color="#bfbfbf"
+                android:src="@drawable/ic_blank"
+                android:layout_marginTop="14dp"
+                android:layout_marginLeft="38dp"
+                android:layout_gravity="center_vertical"
+                android:visibility="visible">
+            </de.hdodenhof.circleimageview.CircleImageView>
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/image_online"
+                android:layout_width="13dp"
+                android:layout_height="13dp"
+                app:civ_border_width="12dp"
+                app:civ_border_color="#05df29"
+                android:src="@drawable/ic_blank"
+                android:layout_marginTop="14dp"
+                android:layout_marginLeft="38dp"
+                android:layout_gravity="center_vertical"
+                android:visibility="gone">
+            </de.hdodenhof.circleimageview.CircleImageView>
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:id="@+id/username"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/status_offline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Offline"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:visibility="visible"
+            />
+
+            <TextView
+                android:id="@+id/status_online"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Online"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:visibility="gone"
+                />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_chat_bubble"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        tools:listitem="@layout/item_list_bubble"
+        app:layout_constraintBottom_toTopOf="@id/layout_send_chat"
+        app:layout_constraintTop_toBottomOf="@id/custom_toolbar"/>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_send_chat"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <EditText
+            android:id="@+id/et_send_chat"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:hint="Type a message"
+            android:layout_marginLeft="5dp"
+            android:layout_marginBottom="5dp"
+            android:paddingLeft="20dp"
+            android:paddingEnd="10dp"
+            android:textSize="18sp"
+            android:background="@drawable/messagebackground"
+            android:textAlignment="textStart"
+            android:layout_alignParentBottom="true"
+            android:layout_marginRight="55dp"
+            android:textColor="@color/black"
+            android:textColorHint="#A8A7A7"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/carviewofsendmessage"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:id="@+id/carviewofsendmessage"
+            android:layout_toRightOf="@id/et_send_chat"
+            android:layout_marginLeft="-50dp"
+            android:layout_marginBottom="5dp"
+            android:backgroundTint="#0D8F80"
+            android:layout_alignParentBottom="true"
+            app:cardCornerRadius="45dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+
+            <ImageButton
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_baseline_arrow_forward_24"
+                android:padding="5dp"
+                android:backgroundTint="@android:color/transparent"
+                android:background="@android:color/transparent"
+                android:id="@+id/imageviewsendmessage"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                app:tint="@color/white"
+                android:contentDescription="Send Button">
+            </ImageButton>
+
+
+        </androidx.cardview.widget.CardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

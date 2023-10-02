@@ -1,7 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.NavTrack" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.NavTrack" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
+<!--        #1D2339-->
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -11,6 +12,14 @@
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
     </style>
+
+    <!-- Define the AppBarOverlay style -->
+    <style name="Theme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:textColorPrimary">@color/purple_500</item>
+        <item name="android:textColorSecondary">@color/purple_700</item>
+    </style>
+
+    <!-- Define the PopupOverlay style -->
+    <style name="Theme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>
