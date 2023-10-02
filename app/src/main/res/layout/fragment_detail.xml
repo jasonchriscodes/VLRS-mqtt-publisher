@@ -113,21 +113,60 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         app:layout_constraintBottom_toBottomOf="parent">
-        <androidx.appcompat.widget.AppCompatEditText
+
+        <EditText
             android:id="@+id/et_send_chat"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/btn_send"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-        <ImageButton
-            android:id="@+id/btn_send"
-            android:layout_width="50dp"
+            android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:src="@drawable/ic_search"
+            android:hint="Type a message"
+            android:layout_marginLeft="5dp"
+            android:layout_marginBottom="5dp"
+            android:paddingLeft="20dp"
+            android:paddingEnd="10dp"
+            android:textSize="18sp"
+            android:background="@drawable/messagebackground"
+            android:textAlignment="textStart"
+            android:layout_alignParentBottom="true"
+            android:layout_marginRight="55dp"
+            android:textColor="@color/black"
+            android:textColorHint="#A8A7A7"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/carviewofsendmessage"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:id="@+id/carviewofsendmessage"
+            android:layout_toRightOf="@id/et_send_chat"
+            android:layout_marginLeft="-50dp"
+            android:layout_marginBottom="5dp"
+            android:backgroundTint="#0D8F80"
+            android:layout_alignParentBottom="true"
+            app:cardCornerRadius="45dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintBottom_toBottomOf="parent">
+
+
+            <ImageButton
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_baseline_arrow_forward_24"
+                android:padding="5dp"
+                android:backgroundTint="@android:color/transparent"
+                android:background="@android:color/transparent"
+                android:id="@+id/imageviewsendmessage"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                app:tint="@color/white"
+                android:contentDescription="Send Button">
+            </ImageButton>
+
+
+        </androidx.cardview.widget.CardView>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
