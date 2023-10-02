@@ -39,9 +39,14 @@ class DetailFragment : Fragment() {
     }
 
     private fun getListChat() {
-        chatList.add(Chat(message = "Hi", timestamp = "21.30", isSender = true))
-        chatList.add(Chat(message = "Hallo", timestamp = "21.30", isSender = false))
-        chatList.add(Chat(message = "Test", timestamp = "21.30", isSender = true))
+        chatList.add(Chat(message = "Hey Jason, how was your weekend?", timestamp = "21.30", isSender = true))
+        chatList.add(Chat(message = "It was great! I went hiking and spent time with friends. How about you?", timestamp = "21.30", isSender = false))
+        chatList.add(Chat(message = "Sounds fun! I had a relaxing weekend at home. Anything exciting coming up for you?", timestamp = "21.30", isSender = true))
+        chatList.add(Chat(message =  "Not much, just work and some dinner plans this week. Anything fun on your agenda?", timestamp = "21.30", isSender = false))
+        chatList.add(Chat(message = "I'm planning to check out a new movie and maybe try a new restaurant. Let me know if you'd like to join!", timestamp = "21.30", isSender = true))
+        chatList.add(Chat(message = "That sounds awesome! I'll keep that in mind. Thanks for the invite!", timestamp = "21.30", isSender = false))
+        chatList.add(Chat(message =  "No problem, anytime! Have a fantastic day!", timestamp = "21.30", isSender = true))
+        chatList.add(Chat(message =  "You too! Take care and have a wonderful day!", timestamp = "21.30", isSender = false))
     }
 
     override fun onDestroyView() {

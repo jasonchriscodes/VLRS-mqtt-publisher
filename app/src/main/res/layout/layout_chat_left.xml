@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutChat"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="20dp">
+
+    <RelativeLayout
+        android:id="@+id/message_send"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_toRightOf="@id/test_arrow"
+        android:background="@drawable/bg_msg_left"
+        android:paddingLeft="15dp"
+        android:paddingTop="5dp"
+        android:paddingRight="15dp"
+        android:paddingBottom="7dp"
+        tools:ignore="UselessParent">
+
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:maxWidth="200dp"
+            android:text="demo Text"
+            android:textColor="#222"
+            android:textSize="17sp" />
+
+        <TextClock
+            android:id="@+id/msg_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/text"
+            android:layout_toEndOf="@+id/text"
+            android:text="1:30 P.M."
+            android:textColor="#888" />
+
+        <ImageView
+            android:id="@+id/is_Read_iv"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginBottom="2dp"
+            android:layout_marginLeft="2dp"
+            android:layout_alignBottom="@+id/text"
+            android:layout_toEndOf="@+id/msg_time"
+            android:src="@drawable/ic_check"
+            app:tint="@color/colorPrimary" />
+
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/test_arrow"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="1dp"
+        android:layout_marginRight="-6dp"
+        android:background="@null"
+        android:scaleX="-1.5"
+        android:src="@drawable/v_bubble_corner_left" />
+</RelativeLayout>

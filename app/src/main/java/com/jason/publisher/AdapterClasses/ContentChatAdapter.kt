@@ -4,42 +4,62 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.jason.publisher.Contacts.Chat
-import com.jason.publisher.databinding.ItemListBubbleBinding
+import com.jason.publisher.databinding.LayoutChatLeftBinding
+import com.jason.publisher.databinding.LayoutChatRightBinding
 
-class ContentChatAdapter(private val dataList: ArrayList<Chat>): RecyclerView.Adapter<ContentChatAdapter.ListViewHolder>() {
+class ContentChatAdapter(private val dataList: ArrayList<Chat>) :
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    inner class ListViewHolder(val binding: ItemListBubbleBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bindItemReceiver(data: Chat) {
-            binding.textMessageBody.text = data.message
-            if (data.isSender) {
-
-            } else {
-
-            }
-        }
+    inner class ListViewHolderRight(val binding: LayoutChatRightBinding) :
+        RecyclerView.ViewHolder(binding.root) {
         fun bindItemSender(data: Chat) {
-            binding.textMessageBody.text = data.message
+            binding.text.text = data.message
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
-        return ListViewHolder(
-            ItemListBubbleBinding.inflate(
+    inner class ListViewHolderLeft(val binding: LayoutChatLeftBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+        fun bindItemReceiver(data: Chat) {
+            binding.text.text = data.message
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_SENDER) {
+            val binding = LayoutChatRightBinding.inflate(
                 LayoutInflater.from(parent.context),
                 parent,
                 false
             )
-        )
+            ListViewHolderRight(binding)
+        } else {
+            val binding = LayoutChatLeftBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+            ListViewHolderLeft(binding)
+        }
     }
 
     override fun getItemCount(): Int = dataList.size
 
-    override fun onBindViewHolder(holder: ListViewHolder, position: Int) {
+    override fun getItemViewType(position: Int): Int {
+        val data = dataList[position]
+        return if (data.isSender) VIEW_TYPE_SENDER else VIEW_TYPE_RECEIVER
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val data = dataList[position]
         if (data.isSender) {
-            holder.bindItemReceiver(data)
+            (holder as ListViewHolderRight).bindItemSender(data)
         } else {
-            holder.bindItemSender(data)
+            (holder as ListViewHolderLeft).bindItemReceiver(data)
         }
+    }
+
+    companion object {
+        private const val VIEW_TYPE_SENDER = 1
+        private const val VIEW_TYPE_RECEIVER = 2
     }
 }

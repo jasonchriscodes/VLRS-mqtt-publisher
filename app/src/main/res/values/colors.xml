@@ -12,4 +12,6 @@
     <color name="colorPrimaryDark">#1C223C</color>
     <color name="colorAccent">#1C223C</color>
     <color name="colorProfile">#1C223C</color>
+    <color name="whatsapp_green">#dbf8c8</color>
+    <color name="whatsapp_tick_blue">#5ac6e6</color>
 </resources>
