@@ -11,6 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingHorizontal="10dp"
-        tools:listitem="@layout/item_list_chat"/>
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp"
+        tools:listitem="@layout/item_list_chat" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
