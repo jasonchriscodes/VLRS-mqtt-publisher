@@ -14,7 +14,7 @@ class SplashScreen : AppCompatActivity() {
         binding = ActivitySplashScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // initialize the MQTT amanger with server URI and client ID
+        // initialize the MQTT manager with server URI and client ID
         mqttManager = MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
 
         // subscribe to a MQTT topic for attribute responses and update UI accordingly
