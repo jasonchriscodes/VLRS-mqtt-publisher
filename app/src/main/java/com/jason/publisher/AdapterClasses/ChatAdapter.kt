@@ -12,6 +12,7 @@ class ChatAdapter(private val dataList: ArrayList<Chat>): RecyclerView.Adapter<C
         fun bindItem(data: Chat) {
             binding.chatPreview.text = data.message
             binding.chatDate.text = data.timestamp
+
         }
     }
 
