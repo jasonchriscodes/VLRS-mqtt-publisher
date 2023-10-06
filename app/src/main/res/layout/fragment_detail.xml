@@ -6,12 +6,22 @@
     android:orientation="vertical"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <TextView
+        android:id="@+id/tv_no_selected_chat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select Contact"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
     <LinearLayout
         android:id="@+id/custom_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:orientation="horizontal"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         android:background="?attr/colorPrimary">
 
         <FrameLayout
@@ -105,6 +115,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         tools:listitem="@layout/item_list_bubble"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/layout_send_chat"
         app:layout_constraintTop_toBottomOf="@id/custom_toolbar"/>
 
@@ -112,6 +123,7 @@
         android:id="@+id/layout_send_chat"
         android:layout_width="match_parent"
         android:layout_height="60dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <EditText

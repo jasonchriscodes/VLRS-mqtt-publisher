@@ -38,6 +38,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
+import com.jason.publisher.model.Coordinate
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException

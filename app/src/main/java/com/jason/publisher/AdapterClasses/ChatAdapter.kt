@@ -1,18 +1,24 @@
 package com.jason.publisher.AdapterClasses
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.jason.publisher.Contacts.Chat
+import com.jason.publisher.model.Contact
 import com.jason.publisher.databinding.ItemListChatBinding
+import com.jason.publisher.`interface`.ContactClickListener
 
-class ChatAdapter(private val dataList: ArrayList<Chat>): RecyclerView.Adapter<ChatAdapter.ListViewHolder>() {
+class ChatAdapter(private val dataList: ArrayList<Contact>, private val context: Context): RecyclerView.Adapter<ChatAdapter.ListViewHolder>() {
 
     inner class ListViewHolder(val binding: ItemListChatBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bindItem(data: Chat) {
+        fun bindItem(data: Contact) {
             binding.chatPreview.text = data.message
             binding.chatDate.text = data.timestamp
 
+            binding.root.setOnClickListener {
+                val listener = context as ContactClickListener
+                listener.onContackClicked(data.id)
+            }
         }
     }
 

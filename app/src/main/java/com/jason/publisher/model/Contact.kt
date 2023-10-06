@@ -1,7 +1,8 @@
-package com.jason.publisher.Contacts
+package com.jason.publisher.model
 
-data class Chat(
+data class Contact(
     val message: String,
     val timestamp: String,
+    val id: String,
     val isSender: Boolean = false
 )
