@@ -26,6 +26,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.Paint
 import android.graphics.Color
 import android.graphics.Typeface
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -86,6 +87,8 @@ class MainActivity : AppCompatActivity() {
         fastestInterval = 5000
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
+    private lateinit var notificationBadge: TextView
+    private var notificationCount = 0
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -148,6 +151,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 //        setSupportActionBar(binding.toolbarMain)
 
+        // Find the notification badge TextView by its ID
+        notificationBadge = findViewById(R.id.notificationBadge)
+
+        // Set an initial badge count, e.g., 0
+        updateBadgeCount(notificationCount)
+
         // Find the chat button by its ID
         val chatButton = findViewById<FloatingActionButton>(R.id.chatButton)
 
@@ -157,7 +166,10 @@ class MainActivity : AppCompatActivity() {
             // For example, you can start a new activity for chat:
             val contactIntent = Intent(this, ChatActivity::class.java)
             startActivity(contactIntent)
-            Log.d("chat button","test")
+            // Simulate a new chat notification
+            notificationCount++
+            updateBadgeCount(notificationCount)
+            // Add logic to open your chat interface
         }
 
         // intialize fused location client
@@ -316,6 +328,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
         handler.post(updateRunnable)
+    }
+
+    private fun updateBadgeCount(count: Int) {
+        // Update the badge TextView with the new count
+        notificationBadge.text = count.toString()
     }
 
     private fun calculateSpeed( 
