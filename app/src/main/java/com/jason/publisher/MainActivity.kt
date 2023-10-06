@@ -25,6 +25,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.Paint
 import android.graphics.Color
+import android.graphics.Typeface
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -361,7 +362,9 @@ class MainActivity : AppCompatActivity() {
         // add the bus stop number to the right of the symbol
         val textSize = 60f // adjust the text size as needed
         val paint = Paint().apply {
-            color = Color.RED // set text color
+            color = Color.GREEN // set text color
+            isFakeBoldText = true // enable bold text
+            typeface = Typeface.DEFAULT_BOLD // set bold typeface
         }
         val text = busStopNumber.toString()
         val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
