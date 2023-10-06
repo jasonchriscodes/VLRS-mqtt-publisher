@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.Timestamp
@@ -22,6 +23,7 @@ class DetailFragment() : Fragment() {
     private var contactList = ArrayList<Chat>()
     private val db = Firebase.firestore
     private var contactId: String? = null
+    var name = "Bus A"
 
     companion object {
         private const val ARG_CONTACT_ID = "contactId"
@@ -56,6 +58,10 @@ class DetailFragment() : Fragment() {
             binding.layoutSendChat.visibility = View.VISIBLE
             getListChat()
         }
+
+        binding.imageviewsendmessage.setOnClickListener {
+            sendMessage()
+        }
     }
 
     private fun setRecyclerList() {
@@ -66,31 +72,43 @@ class DetailFragment() : Fragment() {
     }
 
     private fun getListChat() {
-        var name = "Bus A"
-        db.collection("chats").document(contactId!!).get()
-            .addOnSuccessListener {result ->
-                val data = result.data
-                if (data != null) {
-                    val listChat = data["chats"] as ArrayList<Map<String, Objects>>
-                    for (chat in listChat) {
-                        val sender = chat["sender"].toString();
-                        contactList.add(
-                            Chat(
-                                message =  chat["message"].toString(),
-                                sender = sender,
-                                timestamp = chat["timestamp"] as Timestamp
-                            )
-                        )
-                        setRecyclerList()
-                    }
-                }
+        db.collection("chats").document(contactId!!).addSnapshotListener { value, error ->
+            if (error != null) {
+                return@addSnapshotListener
             }
-            .addOnFailureListener {
-                setRecyclerList()
+            val listChat = value?.data!!["chats"] as ArrayList<Map<String, Any>>
+            contactList.clear()
+            for (chat in listChat) {
+                val sender = chat["sender"].toString()
+                contactList.add(
+                    Chat(
+                        message =  chat["message"].toString(),
+                        sender = sender,
+                        timestamp = chat["timestamp"] as Timestamp
+                    )
+                )
             }
+            setRecyclerList()
+        }
     }
 
-
+    private fun sendMessage() {
+        val textMsg = binding.etSendChat.text.toString()
+        val docRef= db.collection("chats").document(contactId!!)
+        docRef.get().addOnSuccessListener {docSnapshot ->
+            val data = docSnapshot.data
+            val newChat = mapOf("message" to textMsg, "sender" to name, "timestamp" to Timestamp.now())
+            val currentChat = data?.get("chats") as ArrayList<Map<String, Any>>
+            currentChat.add(newChat)
+            docRef.update("chats", currentChat)
+                .addOnSuccessListener {
+                    binding.etSendChat.text.clear()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Failed to send Message, try again", Toast.LENGTH_LONG).show()
+                }
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
