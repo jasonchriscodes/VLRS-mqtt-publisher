@@ -39,6 +39,7 @@ import com.google.gson.reflect.TypeToken
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Coordinate
+import com.jason.publisher.model.Bus
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
@@ -90,6 +91,8 @@ class MainActivity : AppCompatActivity() {
     }
     private lateinit var notificationBadge: TextView
     private var notificationCount = 0
+    private var busRoute = ArrayList<GeoPoint>()
+    private var busStop = ArrayList<GeoPoint>()
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -150,7 +153,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setContentView(R.layout.activity_main)
-//        setSupportActionBar(binding.toolbarMain)
+
+        val args = intent.getStringExtra("busData")
+        getBusStopRoute(args)
 
         // Find the notification badge TextView by its ID
         notificationBadge = findViewById(R.id.notificationBadge)
@@ -196,29 +201,31 @@ class MainActivity : AppCompatActivity() {
 
         // initialize data and map elements
         var index = 0
-        var data = Dummmy.listData // dummy data, will be replaced with actual data
+//        val data = Dummmy.listData // dummy data, will be replaced with actual data
+        val data = busRoute
         // List of bus stop
-        var busStopList = mutableListOf(
-            GeoPoint(-36.7803790629091, 174.99233253149978),
-            GeoPoint(-36.781390583365734,  175.0069988766529),
-            GeoPoint(-36.7833809573664,175.01085953338028),
-            GeoPoint(-36.798831305442754, 175.0344712359602),
-            GeoPoint(-36.79589493383375, 175.04736534425854),
-            GeoPoint(-36.80140942774004, 175.06578856597753),
-            GeoPoint(-36.801060986698346, 175.06972167622655),
-            GeoPoint(-36.7988708171856, 175.07526927783536),
-            GeoPoint(-36.78841923355155, 175.08308720758166),
-            GeoPoint(-36.8011013407773, 175.06983728488143),
-            GeoPoint(-36.80149048573887, 175.0661880120918),
-            GeoPoint(-36.81456058451561, 175.08249437425002),
-            GeoPoint(-36.80915689275718, 175.06174092840925),
-            GeoPoint(-36.79600806801311, 175.04828948305965),
-            GeoPoint(-36.79689036301606, 175.03242493729644),
-            GeoPoint(-36.783650668750916, 175.01138915873818),
-            GeoPoint(-36.79158652202191, 174.9993847004959),
-            GeoPoint(-36.78724309953361, 175.00125045277974),
-            GeoPoint(-36.7803790629091, 174.99233253149978),
-        )
+        val busStopList = busStop
+//        val busStopList = mutableListOf(
+//            GeoPoint(-36.7803790629091, 174.99233253149978),
+//            GeoPoint(-36.781390583365734,  175.0069988766529),
+//            GeoPoint(-36.7833809573664,175.01085953338028),
+//            GeoPoint(-36.798831305442754, 175.0344712359602),
+//            GeoPoint(-36.79589493383375, 175.04736534425854),
+//            GeoPoint(-36.80140942774004, 175.06578856597753),
+//            GeoPoint(-36.801060986698346, 175.06972167622655),
+//            GeoPoint(-36.7988708171856, 175.07526927783536),
+//            GeoPoint(-36.78841923355155, 175.08308720758166),
+//            GeoPoint(-36.8011013407773, 175.06983728488143),
+//            GeoPoint(-36.80149048573887, 175.0661880120918),
+//            GeoPoint(-36.81456058451561, 175.08249437425002),
+//            GeoPoint(-36.80915689275718, 175.06174092840925),
+//            GeoPoint(-36.79600806801311, 175.04828948305965),
+//            GeoPoint(-36.79689036301606, 175.03242493729644),
+//            GeoPoint(-36.783650668750916, 175.01138915873818),
+//            GeoPoint(-36.79158652202191, 174.9993847004959),
+//            GeoPoint(-36.78724309953361, 175.00125045277974),
+//            GeoPoint(-36.7803790629091, 174.99233253149978),
+//        )
         var overlayItems = ArrayList<OverlayItem>()
 
         // create overlay items for bus stops
@@ -329,6 +336,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
         handler.post(updateRunnable)
+    }
+
+    private fun getBusStopRoute(args: String?) {
+        val gson = Gson()
+        if (args != null) {
+            val data = gson.fromJson(args, Bus::class.java)
+            val routes = data.shared!!.busRoute!!.jsonMember1
+            val stops = data.shared.busStop!!.jsonMember1
+            for (route in routes!!) {
+                busRoute.add(GeoPoint(route!!.latitude!!, route.longitude!!))
+            }
+            for (stop in stops!!) {
+                busStop.add(GeoPoint(stop!!.latitude!!, stop.longitude!!))
+            }
+        }
     }
 
     private fun updateBadgeCount(count: Int) {
