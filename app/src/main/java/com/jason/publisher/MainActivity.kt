@@ -155,6 +155,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val args = intent.getStringExtra("busData")
+        val deviceName = intent.getStringExtra("nameDevice")
         getBusStopRoute(args)
 
         // Find the notification badge TextView by its ID

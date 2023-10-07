@@ -32,7 +32,8 @@ class ChatActivity : AppCompatActivity(), ContactClickListener {
         val fragmentManager = supportFragmentManager
         val fragmentTransaction = fragmentManager.beginTransaction()
         val fragment = DetailFragment.newInstance(contactId)
-        fragmentTransaction.replace(R.id.detail_fragment, fragment)
+        fragmentTransaction.remove(fragment)
+            .add(R.id.detail_fragment, fragment)
             .commit()
     }
 
