@@ -60,8 +60,6 @@ class MainActivity : AppCompatActivity() {
 
     // mqtt configuration
     private val brokerUrl = "tcp://43.226.218.94:1883"
-    private val clientId = "jasonAndroidClientId"
-    private val username = "cngz9qqls7dk5zgi3y4j"
     private val topic = "v1/devices/me/telemetry"
 
     // mqtt client and other variables
@@ -154,8 +152,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setContentView(R.layout.activity_main)
 
-        val args = intent.getStringExtra("busData")
-        val deviceName = intent.getStringExtra("nameDevice")
+        val args = intent.getStringExtra(Constant.busDataKey)
+        val deviceName = intent.getStringExtra(Constant.deviceNameKey)
+        val username = intent.getStringExtra(Constant.tokenKey)
+        val clientId = intent.getStringExtra(Constant.aidKey)
         getBusStopRoute(args)
 
         // Find the notification badge TextView by its ID

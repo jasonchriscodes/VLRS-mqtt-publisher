@@ -25,11 +25,13 @@ class SplashScreen : AppCompatActivity() {
         val mId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         Log.d("Android ID", mId)
         var name = ""
+        var accessToken = ""
         val colRef = db.collection("config").get()
         colRef.addOnSuccessListener {query ->
             for (doc in query.documents) {
                 if (doc.data!!["aid"] == mId) {
                     name = doc.data!!["name"].toString()
+                    accessToken = doc.data!!["accessToken"].toString()
                 }
             }
         }
@@ -47,8 +49,10 @@ class SplashScreen : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             mqttManager.disconnect()
             val intent = Intent(this, MainActivity::class.java)
-            intent.putExtra("busData", data)
-            intent.putExtra("nameDevice", name)
+            intent.putExtra(Constant.busDataKey, data)
+            intent.putExtra(Constant.deviceNameKey, name)
+            intent.putExtra(Constant.tokenKey, accessToken)
+            intent.putExtra(Constant.aidKey, mId)
             startActivity(intent)
             finish()
         }, 3000)
