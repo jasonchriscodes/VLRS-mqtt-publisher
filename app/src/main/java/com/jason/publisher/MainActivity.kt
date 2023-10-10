@@ -588,12 +588,10 @@ class MainActivity : AppCompatActivity() {
         try {
             mqttClient.subscribe(topic) { topic, message ->
                 val msg = message?.payload?.toString()
-                binding.textview.text = msg + topic
                 Log.d("LOCATION", msg!!)
             }
             mqttClient.subscribe("v1/devices/me/attributes/response/+") { topic, message ->
                 val msg = message?.payload?.toString()
-                binding.textview.text = msg + topic
                 Log.d("LOCATION", msg!!)
             }
         } catch (e: MqttException) {

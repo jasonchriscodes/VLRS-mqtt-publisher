@@ -43,6 +43,8 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <activity android:name="com.jason.publisher.LiveActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
