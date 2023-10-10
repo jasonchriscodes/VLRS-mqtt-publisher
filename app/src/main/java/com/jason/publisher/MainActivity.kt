@@ -25,6 +25,8 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.Paint
 import android.graphics.Color
+import android.graphics.Typeface
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -36,6 +38,8 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
+import com.jason.publisher.model.Coordinate
+import com.jason.publisher.model.Bus
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
@@ -85,6 +89,10 @@ class MainActivity : AppCompatActivity() {
         fastestInterval = 5000
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
+    private lateinit var notificationBadge: TextView
+    private var notificationCount = 0
+    private var busRoute = ArrayList<GeoPoint>()
+    private var busStop = ArrayList<GeoPoint>()
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -145,7 +153,16 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setContentView(R.layout.activity_main)
-//        setSupportActionBar(binding.toolbarMain)
+
+        val args = intent.getStringExtra("busData")
+        val deviceName = intent.getStringExtra("nameDevice")
+        getBusStopRoute(args)
+
+        // Find the notification badge TextView by its ID
+        notificationBadge = findViewById(R.id.notificationBadge)
+
+        // Set an initial badge count, e.g., 0
+        updateBadgeCount(notificationCount)
 
         // Find the chat button by its ID
         val chatButton = findViewById<FloatingActionButton>(R.id.chatButton)
@@ -156,7 +173,10 @@ class MainActivity : AppCompatActivity() {
             // For example, you can start a new activity for chat:
             val contactIntent = Intent(this, ChatActivity::class.java)
             startActivity(contactIntent)
-            Log.d("chat button","test")
+            // Simulate a new chat notification
+            notificationCount++
+            updateBadgeCount(notificationCount)
+            // Add logic to open your chat interface
         }
 
         // intialize fused location client
@@ -182,29 +202,31 @@ class MainActivity : AppCompatActivity() {
 
         // initialize data and map elements
         var index = 0
-        var data = Dummmy.listData // dummy data, will be replaced with actual data
+//        val data = Dummmy.listData // dummy data, will be replaced with actual data
+        val data = busRoute
         // List of bus stop
-        var busStopList = mutableListOf(
-            GeoPoint(-36.7803790629091, 174.99233253149978),
-            GeoPoint(-36.781390583365734,  175.0069988766529),
-            GeoPoint(-36.7833809573664,175.01085953338028),
-            GeoPoint(-36.798831305442754, 175.0344712359602),
-            GeoPoint(-36.79589493383375, 175.04736534425854),
-            GeoPoint(-36.80140942774004, 175.06578856597753),
-            GeoPoint(-36.801060986698346, 175.06972167622655),
-            GeoPoint(-36.7988708171856, 175.07526927783536),
-            GeoPoint(-36.78841923355155, 175.08308720758166),
-            GeoPoint(-36.8011013407773, 175.06983728488143),
-            GeoPoint(-36.80149048573887, 175.0661880120918),
-            GeoPoint(-36.81456058451561, 175.08249437425002),
-            GeoPoint(-36.80915689275718, 175.06174092840925),
-            GeoPoint(-36.79600806801311, 175.04828948305965),
-            GeoPoint(-36.79689036301606, 175.03242493729644),
-            GeoPoint(-36.783650668750916, 175.01138915873818),
-            GeoPoint(-36.79158652202191, 174.9993847004959),
-            GeoPoint(-36.78724309953361, 175.00125045277974),
-            GeoPoint(-36.7803790629091, 174.99233253149978),
-        )
+        val busStopList = busStop
+//        val busStopList = mutableListOf(
+//            GeoPoint(-36.7803790629091, 174.99233253149978),
+//            GeoPoint(-36.781390583365734,  175.0069988766529),
+//            GeoPoint(-36.7833809573664,175.01085953338028),
+//            GeoPoint(-36.798831305442754, 175.0344712359602),
+//            GeoPoint(-36.79589493383375, 175.04736534425854),
+//            GeoPoint(-36.80140942774004, 175.06578856597753),
+//            GeoPoint(-36.801060986698346, 175.06972167622655),
+//            GeoPoint(-36.7988708171856, 175.07526927783536),
+//            GeoPoint(-36.78841923355155, 175.08308720758166),
+//            GeoPoint(-36.8011013407773, 175.06983728488143),
+//            GeoPoint(-36.80149048573887, 175.0661880120918),
+//            GeoPoint(-36.81456058451561, 175.08249437425002),
+//            GeoPoint(-36.80915689275718, 175.06174092840925),
+//            GeoPoint(-36.79600806801311, 175.04828948305965),
+//            GeoPoint(-36.79689036301606, 175.03242493729644),
+//            GeoPoint(-36.783650668750916, 175.01138915873818),
+//            GeoPoint(-36.79158652202191, 174.9993847004959),
+//            GeoPoint(-36.78724309953361, 175.00125045277974),
+//            GeoPoint(-36.7803790629091, 174.99233253149978),
+//        )
         var overlayItems = ArrayList<OverlayItem>()
 
         // create overlay items for bus stops
@@ -317,6 +339,26 @@ class MainActivity : AppCompatActivity() {
         handler.post(updateRunnable)
     }
 
+    private fun getBusStopRoute(args: String?) {
+        val gson = Gson()
+        if (args != null) {
+            val data = gson.fromJson(args, Bus::class.java)
+            val routes = data.shared!!.busRoute!!.jsonMember1
+            val stops = data.shared.busStop!!.jsonMember1
+            for (route in routes!!) {
+                busRoute.add(GeoPoint(route!!.latitude!!, route.longitude!!))
+            }
+            for (stop in stops!!) {
+                busStop.add(GeoPoint(stop!!.latitude!!, stop.longitude!!))
+            }
+        }
+    }
+
+    private fun updateBadgeCount(count: Int) {
+        // Update the badge TextView with the new count
+        notificationBadge.text = count.toString()
+    }
+
     private fun calculateSpeed( 
 //        binding.button.setOnClickListener {
 //            val message = MqttMessage()
@@ -361,7 +403,9 @@ class MainActivity : AppCompatActivity() {
         // add the bus stop number to the right of the symbol
         val textSize = 60f // adjust the text size as needed
         val paint = Paint().apply {
-            color = Color.RED // set text color
+            color = Color.GREEN // set text color
+            isFakeBoldText = true // enable bold text
+            typeface = Typeface.DEFAULT_BOLD // set bold typeface
         }
         val text = busStopNumber.toString()
         val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text

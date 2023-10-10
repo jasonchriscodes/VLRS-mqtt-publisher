@@ -1,4 +1,4 @@
-package com.jason.publisher
+package com.jason.publisher.model
 
 // A data class to represent geographical coordinates (latitude and longitude).
 data class Coordinate(

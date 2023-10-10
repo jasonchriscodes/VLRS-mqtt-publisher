@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "245332307014",
+    "firebase_url": "https://vlrs-publisher-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "vlrs-publisher",
+    "storage_bucket": "vlrs-publisher.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245332307014:android:9db8b5df19227a99f0ee47",
+        "android_client_info": {
+          "package_name": "com.jason.publisher"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRrjIq6gGLObVnR186Z7kaQOvFoPFSfd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
