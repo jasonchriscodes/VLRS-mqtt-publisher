@@ -7,13 +7,17 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
-class MqttManager(serverUri: String, clientId: String) {
+class MqttManager(
+    serverUri: String,
+    clientId: String,
+    username: String = "cngz9qqls7dk5zgi3y4j"
+) {
     private val persistence = MemoryPersistence()
     private val mqttClient = MqttClient(serverUri, clientId, persistence)
     private val connectOptions = MqttConnectOptions()
 
     init {
-        connectOptions.userName = "cngz9qqls7dk5zgi3y4j"
+        connectOptions.userName = username
         connectOptions.isCleanSession = true
         connectOptions.connectionTimeout = 10
         connectOptions.keepAliveInterval = 60
@@ -30,6 +34,7 @@ class MqttManager(serverUri: String, clientId: String) {
         try {
             val mqttMessage = MqttMessage(message.toByteArray())
             mqttMessage.qos = qos
+            mqttMessage.isRetained = false
             mqttClient.publish(topic, mqttMessage)
         } catch (e: MqttException) {
             Log.d("MqttManager", "Failed to publish message: ${e.message}")
