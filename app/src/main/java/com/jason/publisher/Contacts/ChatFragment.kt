@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.jason.publisher.AdapterClasses.ChatAdapter
+import com.jason.publisher.Constant
 import com.jason.publisher.databinding.FragmentChatBinding
 import com.jason.publisher.model.Contact
 import com.jason.publisher.services.SharedPrefMananger
@@ -43,13 +44,15 @@ class ChatFragment : Fragment() {
     }
 
     private fun getListChat() {
+        val deviceName = sharedPrefMananger.getString(Constant.deviceNameKey, "")
         db.collection("chats").get()
             .addOnSuccessListener {result ->
                 for (doc in result.documents) {
                     val data = doc.data
                     contactList.add(Contact(message = data!!["name"].toString(), timestamp = "21.30", id = data["id"].toString()))
                 }
-                contactList
+                val index = contactList.indexOfFirst { contact -> contact.message == deviceName }
+                contactList.removeAt(index)
                 setRecyclerList()
             }
             .addOnFailureListener {
