@@ -3,7 +3,9 @@ package com.jason.publisher.Contacts
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import com.jason.publisher.Chats.ContentFragment
 import com.jason.publisher.Chats.DetailFragment
+import com.jason.publisher.Constant
 import com.jason.publisher.R
 import com.jason.publisher.databinding.ActivityChatBinding
 import com.jason.publisher.`interface`.ContactClickListener
@@ -15,8 +17,12 @@ class ChatActivity : AppCompatActivity(), ContactClickListener {
         super.onCreate(savedInstanceState)
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val name = intent.getStringExtra(Constant.deviceNameKey)
+        val bundle = Bundle()
+        bundle.putString(Constant.deviceNameKey, name)
 
-        val fragmentLeft = ChatFragment()
+        val fragmentLeft = ContentFragment()
+        fragmentLeft.arguments = bundle
         supportFragmentManager.beginTransaction()
             .replace(R.id.chat_fragment, fragmentLeft)
             .commit()

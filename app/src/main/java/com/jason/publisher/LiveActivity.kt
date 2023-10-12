@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
@@ -24,6 +25,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityLiveBinding
 import com.jason.publisher.model.DeviceInfo
 import org.osmdroid.config.Configuration
@@ -37,6 +39,7 @@ class LiveActivity: AppCompatActivity() {
     private lateinit var binding: ActivityLiveBinding
     private lateinit var mapController: MapController
     private lateinit var mqttManager: MqttManager
+    private lateinit var locationManager: LocationManager
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var marker : Marker
 
@@ -52,47 +55,6 @@ class LiveActivity: AppCompatActivity() {
     var deviceName: String? = null
     var username: String? = null
     var clientId: String? = null
-
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val lastLocation: Location? = locationResult.lastLocation
-            if (lastLocation != null) {
-                latitude = lastLocation.latitude
-                longitude = lastLocation.longitude
-                bearing = lastLocation.bearing
-                speed = lastLocation.speed
-            }
-        }
-    }
-
-    private val locationRequest: LocationRequest = LocationRequest.create().apply {
-        interval = 1000
-        fastestInterval = 500
-        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // check for location permission and request if not granted
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            // request location updates
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                null /* Looper */
-            )
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-        }
-    }
 
     // handle location permission request result
     override fun onRequestPermissionsResult(
@@ -117,6 +79,8 @@ class LiveActivity: AppCompatActivity() {
         setContentView(binding.root)
         latitude = intent.getDoubleExtra("lat", 0.0)
         longitude = intent.getDoubleExtra("lng", 0.0)
+        locationManager = LocationManager(this)
+        startLocationUpdate()
 
         direction = Helper.bearingToDirection(bearing)
 
@@ -130,6 +94,36 @@ class LiveActivity: AppCompatActivity() {
 
         mapConfiguration()
         publishDeviceInfo()
+
+        binding.chatButton.setOnClickListener {
+            val name = intent.getStringExtra(Constant.deviceNameKey)
+            val contactIntent = Intent(this, ChatActivity::class.java)
+            contactIntent.putExtra(Constant.deviceNameKey, name)
+            startActivity(contactIntent)
+        }
+    }
+
+    private fun startLocationUpdate() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.startLocationUpdates(object : LocationListener {
+                override fun onLocationUpdate(location: Location) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                    bearing = location.bearing
+                    speed = location.speed
+                    direction = Helper.bearingToDirection(location.bearing)
+                }
+            })
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                123
+            )
+        }
     }
 
     private fun publishDeviceInfo() {
