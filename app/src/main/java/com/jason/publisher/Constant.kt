@@ -5,4 +5,5 @@ object Constant {
     val deviceNameKey = "nameDevice"
     val tokenKey = "accessToken"
     val aidKey = "aid"
+    val deviceInfoKey = "deviceInfo"
 }

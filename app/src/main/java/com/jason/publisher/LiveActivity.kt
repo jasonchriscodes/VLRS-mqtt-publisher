@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -24,6 +25,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivityLiveBinding
+import com.jason.publisher.model.DeviceInfo
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -38,8 +40,10 @@ class LiveActivity: AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var marker : Marker
 
-    private var latitude: Double? = null
-    private var longitude: Double? = null
+//    private var latitude: Double? = -36.8557154
+//    private var longitude: Double? = 174.7649233
+    private var latitude: Double? = 0.0
+    private var longitude: Double? = 0.0
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = ""
@@ -62,8 +66,8 @@ class LiveActivity: AppCompatActivity() {
     }
 
     private val locationRequest: LocationRequest = LocationRequest.create().apply {
-        interval = 10000
-        fastestInterval = 5000
+        interval = 1000
+        fastestInterval = 500
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
@@ -111,6 +115,11 @@ class LiveActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLiveBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        latitude = intent.getDoubleExtra("lat", 0.0)
+        longitude = intent.getDoubleExtra("lng", 0.0)
+
+        direction = Helper.bearingToDirection(bearing)
+
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
