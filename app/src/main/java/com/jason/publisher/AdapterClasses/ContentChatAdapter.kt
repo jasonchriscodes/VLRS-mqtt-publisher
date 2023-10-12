@@ -7,7 +7,7 @@ import com.jason.publisher.databinding.LayoutChatLeftBinding
 import com.jason.publisher.databinding.LayoutChatRightBinding
 import com.jason.publisher.model.Chat
 
-class ContentChatAdapter(private val dataList: ArrayList<Chat>) :
+class ContentChatAdapter(private val dataList: List<Chat>, private val deviceName: String) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     inner class ListViewHolderRight(val binding: LayoutChatRightBinding) :
@@ -46,12 +46,12 @@ class ContentChatAdapter(private val dataList: ArrayList<Chat>) :
 
     override fun getItemViewType(position: Int): Int {
         val data = dataList[position]
-        return if (data.sender != "Bus A") VIEW_TYPE_SENDER else VIEW_TYPE_RECEIVER
+        return if (data.sender == deviceName) VIEW_TYPE_SENDER else VIEW_TYPE_RECEIVER
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val data = dataList[position]
-        if (data.sender != "Bus A") {
+        if (data.sender == deviceName) {
             (holder as ListViewHolderRight).bindItemSender(data)
         } else {
             (holder as ListViewHolderLeft).bindItemReceiver(data)

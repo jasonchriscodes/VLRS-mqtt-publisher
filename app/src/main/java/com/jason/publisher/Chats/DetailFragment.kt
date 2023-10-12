@@ -1,24 +1,24 @@
 package com.jason.publisher.Chats
 
 import android.os.Bundle
-import android.util.Log
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.jason.publisher.AdapterClasses.ContentChatAdapter
 import com.jason.publisher.model.Chat
-import com.jason.publisher.model.Contact
 import com.jason.publisher.databinding.FragmentDetailBinding
-import java.util.Objects
+import com.jason.publisher.services.SharedPrefMananger
 
 class DetailFragment() : Fragment() {
     private var _binding: FragmentDetailBinding? = null
+    private lateinit var sharedPrefMananger: SharedPrefMananger
     private val binding get() = _binding!!
     private var contactList = ArrayList<Chat>()
     private val db = Firebase.firestore
@@ -50,41 +50,45 @@ class DetailFragment() : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        sharedPrefMananger = SharedPrefMananger(requireContext())
+        val mId = Settings.Secure.getString(requireContext().contentResolver, Settings.Secure.ANDROID_ID)
+        val chatRoomId = generateChatRoomid(mId, contactId)
+        val msgCollection = db.collection("chat").document(chatRoomId).collection("message")
         if (contactId != null) {
             binding.tvNoSelectedChat.visibility = View.GONE
             binding.customToolbar.visibility = View.VISIBLE
             binding.rvChatBubble.visibility = View.VISIBLE
             binding.layoutSendChat.visibility = View.VISIBLE
-            getListChat()
+            getListChat(msgCollection)
         }
 
         binding.imageviewsendmessage.setOnClickListener {
-            sendMessage()
+            sendMessage(mId, msgCollection)
         }
     }
 
     private fun setRecyclerList() {
+        val mId = Settings.Secure.getString(requireContext().contentResolver, Settings.Secure.ANDROID_ID)
         binding.rvChatBubble.setHasFixedSize(true)
         binding.rvChatBubble.layoutManager = LinearLayoutManager(requireContext())
-        val listChatAdapter = ContentChatAdapter(contactList)
+        val listData = contactList.sortedWith(compareBy { it.timestamp })
+        val listChatAdapter = ContentChatAdapter(listData, mId!!)
         binding.rvChatBubble.adapter = listChatAdapter
     }
 
-    private fun getListChat() {
-        db.collection("chats").document(contactId!!).addSnapshotListener { value, error ->
-            if (error != null) {
-                return@addSnapshotListener
-            }
-            val listChat = value?.data!!["chats"] as ArrayList<Map<String, Any>>
+    private fun getListChat(msgCollection: CollectionReference) {
+        msgCollection.addSnapshotListener { querySnapshot, _ ->
             contactList.clear()
-            for (chat in listChat) {
-                val sender = chat["sender"].toString()
+            querySnapshot?.documents?.forEach { documentSnapshot ->
+                val text = documentSnapshot.getString("text") ?: ""
+                val sender = documentSnapshot.getString("sender")
+                val timestamp = documentSnapshot.get("timestamp") as Timestamp
+
                 contactList.add(
                     Chat(
-                        message =  chat["message"].toString(),
-                        sender = sender,
-                        timestamp = chat["timestamp"] as Timestamp
+                        message = text,
+                        sender = sender!!,
+                        timestamp = timestamp
                     )
                 )
             }
@@ -92,22 +96,23 @@ class DetailFragment() : Fragment() {
         }
     }
 
-    private fun sendMessage() {
+    private fun sendMessage(mId: String, msgCollection: CollectionReference) {
         val textMsg = binding.etSendChat.text.toString()
-        val docRef= db.collection("chats").document(contactId!!)
-        docRef.get().addOnSuccessListener {docSnapshot ->
-            val data = docSnapshot.data
-            val newChat = mapOf("message" to textMsg, "sender" to name, "timestamp" to Timestamp.now())
-            val currentChat = data?.get("chats") as ArrayList<Map<String, Any>>
-            currentChat.add(newChat)
-            docRef.update("chats", currentChat)
-                .addOnSuccessListener {
-                    binding.etSendChat.text.clear()
-                }
-                .addOnFailureListener {
-                    Toast.makeText(context, "Failed to send Message, try again", Toast.LENGTH_LONG).show()
-                }
+        if (textMsg.isNotBlank()) {
+            val message = hashMapOf(
+                "sender" to mId,
+                "text" to textMsg,
+                "timestamp" to Timestamp.now()
+            )
+            msgCollection.add(message)
+            binding.etSendChat.text.clear()
         }
+    }
+
+    private fun generateChatRoomid(currentId: String?, contactId: String?): String {
+        val sortedUserIds = listOf(currentId, contactId)
+        val sortedList = sortedUserIds.sortedWith(compareBy { it })
+        return "chat_${sortedList[0]}_${sortedList[1]}"
     }
 
 //    override fun onDestroyView() {

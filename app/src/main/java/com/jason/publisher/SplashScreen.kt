@@ -64,8 +64,9 @@ class SplashScreen : AppCompatActivity() {
 
         Handler(Looper.getMainLooper()).postDelayed({
             mqttManager.disconnect()
-            //val intent = Intent(this, MainActivity::class.java)
-            val intent = Intent(this, LiveActivity::class.java)
+            // Switch Mode
+            val intent = Intent(this, MainActivity::class.java)
+//            val intent = Intent(this, LiveActivity::class.java)
             intent.putExtra(Constant.busDataKey, data)
             intent.putExtra(Constant.deviceNameKey, name)
             intent.putExtra(Constant.tokenKey, accessToken)

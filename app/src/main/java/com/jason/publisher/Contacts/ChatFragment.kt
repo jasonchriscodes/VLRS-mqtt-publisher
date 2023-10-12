@@ -45,11 +45,11 @@ class ChatFragment : Fragment() {
 
     private fun getListChat() {
         val deviceName = sharedPrefMananger.getString(Constant.deviceNameKey, "")
-        db.collection("chats").get()
+        db.collection("config").get()
             .addOnSuccessListener {result ->
                 for (doc in result.documents) {
                     val data = doc.data
-                    contactList.add(Contact(message = data!!["name"].toString(), timestamp = "21.30", id = data["id"].toString()))
+                    contactList.add(Contact(message = data!!["name"].toString(), timestamp = "21.30", id = data["aid"].toString()))
                 }
                 val index = contactList.indexOfFirst { contact -> contact.message == deviceName }
                 contactList.removeAt(index)

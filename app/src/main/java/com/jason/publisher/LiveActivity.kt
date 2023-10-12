@@ -38,10 +38,14 @@ class LiveActivity: AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var marker : Marker
 
-//    private var latitude: Double? = -36.8557154
-//    private var longitude: Double? = 174.7649233
-    private var latitude: Double? = 0.0
-    private var longitude: Double? = 0.0
+//  Mock Mode
+//    private var latitude: Double? = -36.77995
+//    private var longitude: Double? = 174.99204
+//  Live Mode
+    private var latitude: Double? = -36.8557154
+    private var longitude: Double? = 174.7649233
+//    private var latitude: Double? = 0.0
+//    private var longitude: Double? = 0.0
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = ""
