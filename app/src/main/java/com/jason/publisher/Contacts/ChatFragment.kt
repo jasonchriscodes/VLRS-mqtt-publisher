@@ -11,12 +11,14 @@ import com.google.firebase.ktx.Firebase
 import com.jason.publisher.AdapterClasses.ChatAdapter
 import com.jason.publisher.databinding.FragmentChatBinding
 import com.jason.publisher.model.Contact
+import com.jason.publisher.services.SharedPrefMananger
 
 class ChatFragment : Fragment() {
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
     private var contactList = ArrayList<Contact>()
     private val db = Firebase.firestore
+    private lateinit var sharedPrefMananger: SharedPrefMananger
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -28,6 +30,7 @@ class ChatFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        sharedPrefMananger = SharedPrefMananger(requireContext())
         getListChat()
         setRecyclerList()
     }
@@ -46,6 +49,7 @@ class ChatFragment : Fragment() {
                     val data = doc.data
                     contactList.add(Contact(message = data!!["name"].toString(), timestamp = "21.30", id = data["id"].toString()))
                 }
+                contactList
                 setRecyclerList()
             }
             .addOnFailureListener {

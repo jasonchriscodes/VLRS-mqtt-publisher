@@ -15,12 +15,15 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.jason.publisher.databinding.ActivitySplashScreenBinding
-import com.jason.publisher.model.DeviceInfo
+import com.jason.publisher.services.LocationManager
+import com.jason.publisher.services.MqttManager
+import com.jason.publisher.services.SharedPrefMananger
 import org.json.JSONObject
 
 class SplashScreen : AppCompatActivity() {
     private lateinit var mqttManager: MqttManager
     private lateinit var locationManager: LocationManager
+    private lateinit var sharedPrefMananger: SharedPrefMananger
     private lateinit var binding: ActivitySplashScreenBinding
     private var data: String? = null
     private val db = Firebase.firestore
@@ -33,7 +36,7 @@ class SplashScreen : AppCompatActivity() {
         setContentView(binding.root)
 
         val mId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        Log.d("Android ID", mId)
+        sharedPrefMananger = SharedPrefMananger(this)
         var name = ""
         var accessToken = ""
         val colRef = db.collection("config").get()
@@ -42,6 +45,7 @@ class SplashScreen : AppCompatActivity() {
                 if (doc.data!!["aid"] == mId) {
                     name = doc.data!!["name"].toString()
                     accessToken = doc.data!!["accessToken"].toString()
+                    sharedPrefMananger.saveString(Constant.deviceNameKey, name)
                 }
             }
         }

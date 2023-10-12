@@ -1,4 +1,4 @@
-package com.jason.publisher
+package com.jason.publisher.services
 
 import android.util.Log
 import org.eclipse.paho.client.mqttv3.MqttClient
