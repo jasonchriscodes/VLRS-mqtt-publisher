@@ -19,10 +19,10 @@ data class JsonMember1Item(
 
 data class Shared(
 
-	@field:SerializedName("busStop")
+	@field:SerializedName("busStop2")
 	val busStop: BusStop? = null,
 
-	@field:SerializedName("busRoute")
+	@field:SerializedName("busRoute2")
 	val busRoute: BusRoute? = null
 )
 

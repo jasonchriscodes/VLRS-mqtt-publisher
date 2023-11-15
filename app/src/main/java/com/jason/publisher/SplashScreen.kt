@@ -101,7 +101,7 @@ class SplashScreen : AppCompatActivity() {
 
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys","busRoute,busStop")
+        jsonObject.put("sharedKeys","busRoute2,busStop2")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }
