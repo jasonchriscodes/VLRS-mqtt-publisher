@@ -6,4 +6,6 @@ object Constant {
     val tokenKey = "accessToken"
     val aidKey = "aid"
     val deviceInfoKey = "deviceInfo"
+
+    val sharedPrefsKey = "mySharedPreferences"
 }

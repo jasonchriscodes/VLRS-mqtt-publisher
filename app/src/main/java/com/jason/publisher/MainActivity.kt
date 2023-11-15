@@ -304,9 +304,11 @@ class MainActivity : AppCompatActivity() {
         mapView.overlays.add(routePolylineTo)
 
         mapController = mapView.controller as MapController
-        val center = GeoPoint(-36.797158, 175.041309)
+//        val center = GeoPoint(-36.797158, 175.041309)
+        val center = GeoPoint(-36.854230523715415, 174.76658149302463)
         mapController.setCenter(center)
-        mapController.setZoom(14)
+//        mapController.setZoom(14)
+        mapController.setZoom(18)
 
         // create a handler for updating the marker's position
         val handler = Handler(Looper.getMainLooper())
@@ -421,7 +423,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun generatePolyline() {
         try {
-            val stream = assets.open("busRoute.json")
+            val stream = assets.open("busRoute2.json")
             val size = stream.available()
             val buffer = ByteArray(size)
             stream.read(buffer)
@@ -558,7 +560,7 @@ class MainActivity : AppCompatActivity() {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //   public void onRequestPermissionsResult(int requestCode, String[] per8missions,
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.

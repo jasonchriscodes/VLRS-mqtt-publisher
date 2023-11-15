@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
@@ -12,24 +13,20 @@ import android.os.Handler
 import android.os.Looper
 import android.preference.PreferenceManager
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-import com.google.gson.Gson
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityLiveBinding
-import com.jason.publisher.model.DeviceInfo
+import com.jason.publisher.services.LocationManager
+import com.jason.publisher.services.MqttManager
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.Marker
 
@@ -37,13 +34,18 @@ class LiveActivity: AppCompatActivity() {
     private lateinit var binding: ActivityLiveBinding
     private lateinit var mapController: MapController
     private lateinit var mqttManager: MqttManager
+    private lateinit var locationManager: LocationManager
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var marker : Marker
 
-//    private var latitude: Double? = -36.8557154
-//    private var longitude: Double? = 174.7649233
-    private var latitude: Double? = 0.0
-    private var longitude: Double? = 0.0
+//  Mock Mode
+//    private var latitude: Double? = -36.77995
+//    private var longitude: Double? = 174.99204
+//  Live Mode
+    private var latitude: Double? = -36.8557154
+    private var longitude: Double? = 174.7649233
+//    private var latitude: Double? = 0.0
+//    private var longitude: Double? = 0.0
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = ""
@@ -52,47 +54,6 @@ class LiveActivity: AppCompatActivity() {
     var deviceName: String? = null
     var username: String? = null
     var clientId: String? = null
-
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val lastLocation: Location? = locationResult.lastLocation
-            if (lastLocation != null) {
-                latitude = lastLocation.latitude
-                longitude = lastLocation.longitude
-                bearing = lastLocation.bearing
-                speed = lastLocation.speed
-            }
-        }
-    }
-
-    private val locationRequest: LocationRequest = LocationRequest.create().apply {
-        interval = 1000
-        fastestInterval = 500
-        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // check for location permission and request if not granted
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            // request location updates
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                null /* Looper */
-            )
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-        }
-    }
 
     // handle location permission request result
     override fun onRequestPermissionsResult(
@@ -117,6 +78,8 @@ class LiveActivity: AppCompatActivity() {
         setContentView(binding.root)
         latitude = intent.getDoubleExtra("lat", 0.0)
         longitude = intent.getDoubleExtra("lng", 0.0)
+        locationManager = LocationManager(this)
+        startLocationUpdate()
 
         direction = Helper.bearingToDirection(bearing)
 
@@ -130,6 +93,36 @@ class LiveActivity: AppCompatActivity() {
 
         mapConfiguration()
         publishDeviceInfo()
+
+        binding.chatButton.setOnClickListener {
+            val name = intent.getStringExtra(Constant.deviceNameKey)
+            val contactIntent = Intent(this, ChatActivity::class.java)
+            contactIntent.putExtra(Constant.deviceNameKey, name)
+            startActivity(contactIntent)
+        }
+    }
+
+    private fun startLocationUpdate() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.startLocationUpdates(object : LocationListener {
+                override fun onLocationUpdate(location: Location) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                    bearing = location.bearing
+                    speed = location.speed
+                    direction = Helper.bearingToDirection(location.bearing)
+                }
+            })
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                123
+            )
+        }
     }
 
     private fun publishDeviceInfo() {
