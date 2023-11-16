@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ktx.firestore
@@ -58,12 +59,13 @@ class SplashScreen : AppCompatActivity() {
         // subscribe to a MQTT topic for attribute responses and update UI accordingly
         mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
             data = message
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
 
         requestData()
 
         Handler(Looper.getMainLooper()).postDelayed({
-            mqttManager.disconnect()
+            // mqttManager.disconnect()
             // Switch Mode
             val intent = Intent(this, MainActivity::class.java)
 //            val intent = Intent(this, LiveActivity::class.java)

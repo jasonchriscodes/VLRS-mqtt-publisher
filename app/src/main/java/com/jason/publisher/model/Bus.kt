@@ -23,7 +23,10 @@ data class Shared(
 	val busStop: BusStop? = null,
 
 	@field:SerializedName("busRoute2")
-	val busRoute: BusRoute? = null
+	val busRoute: BusRoute? = null,
+
+	@field:SerializedName("message")
+	val message: String? = null
 )
 
 data class BusStop(

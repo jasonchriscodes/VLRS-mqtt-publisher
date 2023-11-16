@@ -43,6 +43,7 @@ import com.jason.publisher.model.Bus
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import org.json.JSONException
+import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -91,6 +92,8 @@ class MainActivity : AppCompatActivity() {
     private var notificationCount = 0
     private var busRoute = ArrayList<GeoPoint>()
     private var busStop = ArrayList<GeoPoint>()
+    private var text = "Test"
+    private lateinit var textView: TextView
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -105,6 +108,7 @@ class MainActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val delayInMillis: Long = 5000
+    private val connectOptions = MqttConnectOptions()
 
     override fun onStart() {
         super.onStart()
@@ -197,8 +201,10 @@ class MainActivity : AppCompatActivity() {
         val persistence = MemoryPersistence()
         mqttClient = MqttClient(brokerUrl, clientId, persistence)
         val options = MqttConnectOptions()
+//        options.userName = "z0MQXzmMsNZwiD9Pwn6J";
         options.userName = username;
         connectMQTTClient(options)
+        Log.d("INITT", "topic")
 
         // initialize data and map elements
         var index = 0
@@ -331,7 +337,7 @@ class MainActivity : AppCompatActivity() {
                     mapView.invalidate()
                     Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
                     index = (index + 1) % data.size
-                    
+
                     // publish message to MQTT
                     publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction},  \"speed\":${speed}}")
                     handler.postDelayed(this, delayInMillis)
@@ -468,12 +474,36 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectMQTTClient(options: MqttConnectOptions) {
         try {
+            Log.d("CONSSS", "topic")
+            connectOptions.isCleanSession = true
+            connectOptions.connectionTimeout = 10
+            connectOptions.keepAliveInterval = 60
             mqttClient.connect(options)
             subscribeToTopic()
         } catch (e: MqttException) {
             e.printStackTrace()
         }
     }
+
+//    private fun requestData() {
+//        val jsonObject = JSONObject()
+//        jsonObject.put("sharedKeys","message")
+//        val jsonString = jsonObject.toString()
+//        val mqttMessage = MqttMessage(jsonString.toByteArray())
+//        mqttMessage.qos = 1
+//        mqttMessage.isRetained = false
+//        mqttClient.publish("v1/devices/me/attributes/request/5", mqttMessage)
+////        val handler = Handler(Looper.getMainLooper())
+////        val updateRunnable = object : Runnable {
+////            override fun run() {
+////                Log.d("Shared Key", "Publish Message")
+////
+////                handler.postDelayed(this, delayInMillis)
+////            }
+////        }
+////        handler.post(updateRunnable)
+//
+//    }
 
     // callback function to pusblish mqtt messages
     private fun publishMessage(msg: String) {
@@ -494,7 +524,7 @@ class MainActivity : AppCompatActivity() {
 
                 override fun deliveryComplete(token: IMqttDeliveryToken?) {
                     Log.d("Delivery Complete", "Message sent")
-                    showNotification()
+                    showNotification("Lat: $lat, Long: $lon, Direction: $direction", "channel1", 1)
                 }
 
             })
@@ -535,20 +565,73 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun showNotification() {
+    private fun subscribeToTopic() {
+        try {
+//            mqttClient.subscribe(topic) { topic, message ->
+//                val msg = message?.payload?.toString()
+//                Log.d("LOCATION", msg!!)
+//            }
+//            mqttClient.subscribe("v1/devices/me/attributes/response/+") { _, message ->
+//                val msg = message?.payload?.toString()
+//                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+//                Log.d("Shared Key", msg.toString())
+//                showNotification(msg!!, "channel2", 2)
+//            }
+//            requestData()
+            Log.d("SUBSSS", "topic")
+            val jsonObject = JSONObject()
+            jsonObject.put("sharedKeys","message")
+            val jsonString = jsonObject.toString()
+            val gson = Gson()
+            mqttClient.subscribe("v1/devices/me/attributes/response/+") { _, msg ->
+                runOnUiThread {
+                    if (text != msg.toString()) {
+                        text = msg.toString()
+                        val data = gson.fromJson(text, Bus::class.java)
+                        var msg = data.shared!!.message
+                        msg = "Text from admin: $msg"
+                        showNotification(msg, "Channel12", System.currentTimeMillis().toInt())
+                    }
+                }
+                Log.d("MSGGG", msg.toString())
+            }
+            val mqttMessage = MqttMessage(jsonString.toByteArray())
+            mqttMessage.qos = 1
+            mqttMessage.isRetained = false
+            mqttClient.publish("v1/devices/me/attributes/request/5", mqttMessage)
+
+            val handler = Handler(Looper.getMainLooper())
+            val updateRunnable = object : Runnable {
+                override fun run() {
+                    mqttClient.publish("v1/devices/me/attributes/request/5", mqttMessage)
+                    textView.text = text
+                    handler.postDelayed(this, 100)
+                }
+            }
+            handler.post(updateRunnable)
+            textView.setOnClickListener {
+                mqttClient.publish("v1/devices/me/attributes/request/5", mqttMessage)
+                textView.text = text
+            }
+        } catch (e: MqttException) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun showNotification(content: String, channelId: String, id: Int) {
         val notificationManageer = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                channelId,
                 "My Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManageer.createNotificationChannel(channel)
         }
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Connected")
             .setSmallIcon(R.drawable.ic_signal)
-            .setContentText("Lat: $lat, Long: $lon, Direction: $direction")
+            .setContentText(content)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(false)
             .setSubText("Data Send")
@@ -567,22 +650,7 @@ class MainActivity : AppCompatActivity() {
             // handle permission for post notifications here if needed
             return
         }
-        NotificationManagerCompat.from(this).notify(1, builder.build())
-    }
-
-    private fun subscribeToTopic() {
-        try {
-            mqttClient.subscribe(topic) { topic, message ->
-                val msg = message?.payload?.toString()
-                Log.d("LOCATION", msg!!)
-            }
-            mqttClient.subscribe("v1/devices/me/attributes/response/+") { topic, message ->
-                val msg = message?.payload?.toString()
-                Log.d("LOCATION", msg!!)
-            }
-        } catch (e: MqttException) {
-            e.printStackTrace()
-        }
+        NotificationManagerCompat.from(this).notify(id, builder.build())
     }
 
     override fun onDestroy() {
