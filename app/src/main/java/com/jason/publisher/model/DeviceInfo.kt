@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class DeviceInfo(
     val latitude: Double,
-    val longitud: Double,
+    val longitude: Double,
     val bearing: Float,
     val speed: Float,
     val direction: String

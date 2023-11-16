@@ -22,12 +22,15 @@
         tools:targetApi="31">
         <activity
             android:name=".TestActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".Contacts.ChatActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
 
         <service android:name="org.eclipse.paho.android.service.MqttService" />
@@ -47,7 +50,8 @@
                 android:value="" />
         </activity>
         <activity
-            android:name=".LiveActivity"
+            android:name=".OfflineActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
     </application>
 
