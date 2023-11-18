@@ -81,7 +81,7 @@ object Helper {
         drawable.draw(canvas)
 
         // add the bus stop number to the right of the symbol
-        val textSize = 40f // adjust the text size as needed
+        val textSize = 30f // adjust the text size as needed
         val paint = Paint().apply {
             color = Color.WHITE // set text color
             isFakeBoldText = true // enable bold text
@@ -90,7 +90,7 @@ object Helper {
         }
         val text = busStopNumber.toString()
         val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
-        val y = canvas.height - 30f // adjust the vertical position to position the text below the symbol
+        val y = canvas.height - 10f // adjust the vertical position to position the text below the symbol
 
         canvas.drawText(text, x, y, paint)
 
