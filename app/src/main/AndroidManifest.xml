@@ -21,10 +21,16 @@
         android:theme="@style/Theme.NavTrack"
         tools:targetApi="31">
         <activity
+            android:name=".TestActivity"
+            android:screenOrientation="landscape"
+            android:exported="false" />
+        <activity
             android:name=".Contacts.ChatActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
 
         <service android:name="org.eclipse.paho.android.service.MqttService" />
@@ -43,7 +49,9 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
-        <activity android:name="com.jason.publisher.LiveActivity"
+        <activity
+            android:name=".OfflineActivity"
+            android:screenOrientation="landscape"
             android:exported="false" />
     </application>
 

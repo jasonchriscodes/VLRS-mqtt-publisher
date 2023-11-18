@@ -1,238 +1,190 @@
 package com.jason.publisher
 
-// import statements
-import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import android.graphics.Color
+import android.graphics.Rect
 import android.location.Location
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.preference.PreferenceManager
-import android.util.Log
-import android.widget.Toast
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.Paint
-import android.graphics.Color
-import android.graphics.Typeface
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.*
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
-import com.jason.publisher.model.Coordinate
 import com.jason.publisher.model.Bus
-import org.eclipse.paho.client.mqttv3.*
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
-import org.json.JSONException
+import com.jason.publisher.model.BusRoute
+import com.jason.publisher.model.BusStop
+import com.jason.publisher.model.Message
+import com.jason.publisher.services.LocationManager
+import com.jason.publisher.services.MqttManager
+import com.jason.publisher.services.NotificationManager
+import com.jason.publisher.services.SharedPrefMananger
+import com.jason.publisher.services.SoundManager
+import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
-import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
-import java.io.IOException
-import java.nio.charset.StandardCharsets
 
 class MainActivity : AppCompatActivity() {
 
-    // mqtt configuration
-    private val brokerUrl = "tcp://43.226.218.94:1883"
-    private val topic = "v1/devices/me/telemetry"
-
-    // mqtt client and other variables
-    private lateinit var mqttClient: MqttClient
     private lateinit var binding: ActivityMainBinding
-    private var lat = 0.0
-    private var lon = 0.0
-    private var CHANNEL_ID = "test"
+    private lateinit var mqttManager: MqttManager
+    private lateinit var locationManager: LocationManager
+    private lateinit var sharedPrefMananger: SharedPrefMananger
+    private lateinit var notificationManager: NotificationManager
+    private lateinit var soundManager: SoundManager
     private lateinit var mapController: MapController
-    private lateinit var mapView: MapView
-    private lateinit var marker : Marker
-    private lateinit var polyline: Polyline
-    private lateinit var routeData: Map<String, List<Coordinate>>
-    private lateinit var sensorManager: SensorManager
-    private var bearing : Float = 0.0F
-    private var speed: Double = 0.0
-    private var direction : String? = null
-    private var mAccelerometer = FloatArray(3)
-    private var mGeomagneic = FloatArray(3)
-    private var compassSensor: Sensor? = null
-    private var acceleroSensor: Sensor? = null
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private val locationRequest: LocationRequest = LocationRequest.create().apply {
-        interval = 10000
-        fastestInterval = 5000
-        priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-    }
-    private lateinit var notificationBadge: TextView
-    private var notificationCount = 0
-    private var busRoute = ArrayList<GeoPoint>()
-    private var busStop = ArrayList<GeoPoint>()
 
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val lastLocation: Location? = locationResult.lastLocation
-            if (lastLocation != null) {
-                lat = lastLocation.latitude
-                lon = lastLocation.longitude
-                bearing = lastLocation.bearing
-            }
-        }
-    }
+    private var latitude = 0.0
+    private var longitude = 0.0
+    private var bearing = 0.0F
+    private var speed = 0.0F
+    private var direction = "North"
 
-    private val handler = Handler(Looper.getMainLooper())
-    private val delayInMillis: Long = 5000
-
-    override fun onStart() {
-        super.onStart()
-        // check for location permission and request if not granted
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            // request location updates
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                null /* Looper */
-            )
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-        }
-    }
-
-    // handle location permission request result
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            // permission granted, you can proceed
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-            } else {
-                // Location permission denied, you can provide feedback to the user or handle it according to your needs
-            }
-        }
-    }
+    private var lastMessage = ""
+    private var totalMessage = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        setContentView(R.layout.activity_main)
 
-        val args = intent.getStringExtra(Constant.busDataKey)
-        val deviceName = intent.getStringExtra(Constant.deviceNameKey)
-        val username = intent.getStringExtra(Constant.tokenKey)
-        val clientId = intent.getStringExtra(Constant.aidKey)
-        getBusStopRoute(args)
+        Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
 
-        // Find the notification badge TextView by its ID
-        notificationBadge = findViewById(R.id.notificationBadge)
+        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID)
+        locationManager = LocationManager(this)
+        sharedPrefMananger = SharedPrefMananger(this)
+        notificationManager = NotificationManager(this)
+        soundManager = SoundManager(this)
 
-        // Set an initial badge count, e.g., 0
-        updateBadgeCount(notificationCount)
+        getDefaultConfigValue()
+        getMessageCount()
+        startLocationUpdate()
+        mapViewSetup()
+        subscribeAdminMessage()
+        requestAdminMessage()
 
-        // Find the chat button by its ID
-        val chatButton = findViewById<FloatingActionButton>(R.id.chatButton)
+        binding.chatButton.setOnClickListener {
+            val intent = Intent(this, TestActivity::class.java)
+            startActivity(intent)
+        }
+    }
 
-        // Set an OnClickListener to open a blank canvas or start a chat activity
-        chatButton.setOnClickListener {
-            // Replace this with your code to open a chat activity or fragment
-            // For example, you can start a new activity for chat:
-            val contactIntent = Intent(this, ChatActivity::class.java)
-            startActivity(contactIntent)
-            // Simulate a new chat notification
-            notificationCount++
-            updateBadgeCount(notificationCount)
-            // Add logic to open your chat interface
+    private fun requestAdminMessage() {
+        val jsonObject = JSONObject()
+        jsonObject.put("sharedKeys","message")
+        val jsonString = jsonObject.toString()
+        val handler = Handler(Looper.getMainLooper())
+        handler.post(object : Runnable {
+            override fun run() {
+                mqttManager.publish(PUB_MSG_TOPIC, jsonString)
+                handler.postDelayed(this, REQUEST_PERIODIC_TIME)
+            }
+        })
+    }
+
+    private fun subscribeAdminMessage() {
+        mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
+            runOnUiThread {
+                val gson = Gson()
+                val data = gson.fromJson(message, Bus::class.java)
+                val msg = data.shared!!.message!!
+                if (lastMessage != msg) {
+                    saveNewMessage(msg)
+                    showNotification(msg)
+                }
+            }
+        }
+    }
+
+    private fun showNotification(message: String) {
+        notificationManager.showNotification(
+            channelId = "channel2",
+            notificationId = System.currentTimeMillis().toInt(),
+            title = "Message from Admin",
+            message = message,
+            true
+        )
+        soundManager.playSound(SOUND_FILE_NAME)
+    }
+
+    private fun saveNewMessage(message: String) {
+        sharedPrefMananger.saveString(LAST_MSG_KEY, message)
+        lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
+
+        val messageList = ArrayList<Message>()
+        val newMessage = Message(message, false, System.currentTimeMillis())
+        val currentMessage = sharedPrefMananger.getMessageList(MSG_KEY)
+        if (currentMessage.isNotEmpty()) {
+            currentMessage.forEach { msg ->
+                messageList.add(msg)
+            }
+        }
+        messageList.add(newMessage)
+        sharedPrefMananger.saveMessageList(MSG_KEY, messageList)
+
+        getMessageCount()
+    }
+
+    private fun startLocationUpdate() {
+        locationManager.startLocationUpdates(object: LocationListener {
+            override fun onLocationUpdate(location: Location) {
+                latitude = location.latitude
+                longitude = location.longitude
+                bearing = location.bearing
+                speed = location.speed
+                direction = Helper.bearingToDirection(location.bearing)
+            }
+        })
+    }
+
+    private fun mapViewSetup() {
+        val center = GeoPoint(latitude, longitude)
+
+        val marker = Marker(binding.map)
+        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+
+        mapController = binding.map.controller as MapController
+        mapController.setCenter(center)
+        mapController.setZoom(18.0)
+
+        binding.map.apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+            mapCenter
+            setMultiTouchControls(true)
+            getLocalVisibleRect(Rect())
         }
 
-        // intialize fused location client
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        updateMarkerPosition(marker)
+        generatePolyline()
+    }
 
-        // initialize ui elements
-        mapView = findViewById(R.id.map)
+    private fun generatePolyline() {
+        val busRoute = ArrayList<GeoPoint>()
+        val busStop = ArrayList<GeoPoint>()
+        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+        val routes = busData["routes"] as BusRoute
+        routes.jsonMember1!!.forEach {
+            busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+        }
+        val stops = busData["stops"] as BusStop
+        stops.jsonMember1!!.forEach {
+            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+        }
 
-        // load map configuration
-        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
-
-        // initialize sensor manager and sensors
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-        // set up MQTT client
-        val persistence = MemoryPersistence()
-        mqttClient = MqttClient(brokerUrl, clientId, persistence)
-        val options = MqttConnectOptions()
-        options.userName = username;
-        connectMQTTClient(options)
-
-        // initialize data and map elements
-        var index = 0
-//        val data = Dummmy.listData // dummy data, will be replaced with actual data
-        val data = busRoute
-        // List of bus stop
-        val busStopList = busStop
-//        val busStopList = mutableListOf(
-//            GeoPoint(-36.7803790629091, 174.99233253149978),
-//            GeoPoint(-36.781390583365734,  175.0069988766529),
-//            GeoPoint(-36.7833809573664,175.01085953338028),
-//            GeoPoint(-36.798831305442754, 175.0344712359602),
-//            GeoPoint(-36.79589493383375, 175.04736534425854),
-//            GeoPoint(-36.80140942774004, 175.06578856597753),
-//            GeoPoint(-36.801060986698346, 175.06972167622655),
-//            GeoPoint(-36.7988708171856, 175.07526927783536),
-//            GeoPoint(-36.78841923355155, 175.08308720758166),
-//            GeoPoint(-36.8011013407773, 175.06983728488143),
-//            GeoPoint(-36.80149048573887, 175.0661880120918),
-//            GeoPoint(-36.81456058451561, 175.08249437425002),
-//            GeoPoint(-36.80915689275718, 175.06174092840925),
-//            GeoPoint(-36.79600806801311, 175.04828948305965),
-//            GeoPoint(-36.79689036301606, 175.03242493729644),
-//            GeoPoint(-36.783650668750916, 175.01138915873818),
-//            GeoPoint(-36.79158652202191, 174.9993847004959),
-//            GeoPoint(-36.78724309953361, 175.00125045277974),
-//            GeoPoint(-36.7803790629091, 174.99233253149978),
-//        )
-        var overlayItems = ArrayList<OverlayItem>()
-
-        // create overlay items for bus stops
-        busStopList.forEachIndexed { index, geoPoint ->
+        val overlayItems = ArrayList<OverlayItem>()
+        busStop.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-            val busStopSymbol = createBusStopSymbol(busStopNumber)
+//            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
@@ -241,360 +193,93 @@ class MainActivity : AppCompatActivity() {
             marker.setMarker(busStopSymbol)
             overlayItems.add(marker)
         }
+        val overlayItem = ItemizedIconOverlay(
+            overlayItems,
+            object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+                override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+                    return true
+                }
 
-        // create and add an overlay for bus stops
-        val overlayItem = ItemizedIconOverlay<OverlayItem>(overlayItems, object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
-            override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
-                return true
-            }
+                override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                    return false
+                }
+            },
+            applicationContext
+        )
+        binding.map.overlays.add(overlayItem)
 
-            override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
-                return false
-            }
+        val polyline = Polyline()
+        polyline.setPoints(busRoute)
+        polyline.outlinePaint.color = Color.BLUE
+        polyline.outlinePaint.strokeWidth = 5f
 
-        }, applicationContext)
-        mapView.overlays.add(overlayItem)
+        binding.map.overlays.add(polyline)
+        binding.map.invalidate()
+    }
 
-        // generate and add a polyline based on route data
-        generatePolyline()
-
-        with(mapView) {
-            setMultiTouchControls(true)
-            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-        }
-        marker = Marker(mapView)
-        marker.icon= resources.getDrawable(R.drawable.ic_bus)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-        // create and add polyline for the route
-        val routePolylineFrom = Polyline(mapView)
-        val routePolylineTo = Polyline(mapView)
-
-        // define lists of segments for each route (from and to)
-        var fromList = ArrayList<Int>()
-        var toList = ArrayList<Int>()
-        for (i in 1..1) {
-            fromList.add(i)
-        }
-        for (i in 2..2) {
-            toList.add(i)
-        }
-
-        // set the color of the polyline (e.g., blue)
-        routePolylineFrom.color = android.graphics.Color.BLUE
-
-        // set the color of the polyline (e.g., blue)
-        routePolylineTo.color = android.graphics.Color.RED
-
-        // add points to the polylines based on the route data
-        for (index in fromList) {
-            routeData["$index"]?.forEach { position ->
-                routePolylineFrom.addPoint(GeoPoint(position.latitude,position.longitude))
-            }
-        }
-        for (index in toList) {
-            routeData["$index"]?.forEach { position ->
-                routePolylineTo.addPoint(GeoPoint(position.latitude,position.longitude))
-            }
-        }
-
-        // add polylines to the map
-        mapView.overlays.add(routePolylineFrom)
-        mapView.overlays.add(routePolylineTo)
-
-        mapController = mapView.controller as MapController
-//        val center = GeoPoint(-36.797158, 175.041309)
-        val center = GeoPoint(-36.854230523715415, 174.76658149302463)
-        mapController.setCenter(center)
-//        mapController.setZoom(14)
-        mapController.setZoom(18)
-
-        // create a handler for updating the marker's position
+    private fun updateMarkerPosition(marker: Marker) {
         val handler = Handler(Looper.getMainLooper())
         val updateRunnable = object : Runnable {
             override fun run() {
-                if (index < data.size) {
-                    var coordinate = data[index]
-
-                    // update marker position and rotation
-                    marker.position = coordinate
-                    marker.rotation = bearing
-                    mapView.overlays.add(marker)
-
-                    // calculate speed based on current and previous coordinates
-                    if (index != 0) {
-                        var secondCoordinate = data[index - 1]
-                        calculateSpeed(coordinate.latitude, coordinate.longitude, secondCoordinate.latitude, secondCoordinate.longitude)
-                    }
-
-                    mapView.invalidate()
-                    Log.d("Coordinate", "${coordinate.latitude},${coordinate.longitude}")
-                    index = (index + 1) % data.size
-                    
-                    // publish message to MQTT
-                    publishMessage("{\"latitude\":${coordinate.latitude}, \"longitude\":${coordinate.longitude}, \"bearing\":${bearing},  \"direction\":${direction},  \"speed\":${speed}}")
-                    handler.postDelayed(this, delayInMillis)
-                }
+                marker.position = GeoPoint(latitude, longitude)
+                marker.rotation = bearing
+                binding.map.overlays.add(marker)
+                binding.map.invalidate()
+                publishPosition()
+                handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
         handler.post(updateRunnable)
     }
 
-    private fun getBusStopRoute(args: String?) {
-        val gson = Gson()
-        if (args != null) {
-            val data = gson.fromJson(args, Bus::class.java)
-            val routes = data.shared!!.busRoute!!.jsonMember1
-            val stops = data.shared.busStop!!.jsonMember1
-            for (route in routes!!) {
-                busRoute.add(GeoPoint(route!!.latitude!!, route.longitude!!))
-            }
-            for (stop in stops!!) {
-                busStop.add(GeoPoint(stop!!.latitude!!, stop.longitude!!))
-            }
-        }
-    }
-
-    private fun updateBadgeCount(count: Int) {
-        // Update the badge TextView with the new count
-        notificationBadge.text = count.toString()
-    }
-
-    private fun calculateSpeed( 
-//        binding.button.setOnClickListener {
-//            val message = MqttMessage()
-//            val jsonObject = JSONObject()
-//            jsonObject.put("sharedKeys","busRoute")
-//            val jsonString = jsonObject.toString()
-//            message.payload = jsonString.toByteArray()
-//            mqttClient.publish("v1/devices/me/attributes/request/1", message)
-//        }
-        firstLat: Double,
-        firstLong: Double,
-        secondLat: Double,
-        secondLong: Double
-    ) {
-        val distance = haversine(firstLat, firstLong, secondLat, secondLong)
-        speed = distance * 1000 / (delayInMillis / 1000)
-        Log.d("Distance", distance.toString())
-        Log.d("Speed", speed.toString())
-    }
-
-    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val deltaLat = Math.toRadians(lat2 - lat1)
-        val deltaLon = Math.toRadians(lon2 - lon1)
-        val a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
-        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return 6371 * c // radius of the Earth in kilometers
-    }
-    private fun createBusStopSymbol(busStopNumber: Int): Drawable {
-        // create a custom drawable with the bus stop number
-        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_bus_stop) as BitmapDrawable
-        val bitmap = Bitmap.createBitmap(
-            drawable.intrinsicWidth,
-            drawable.intrinsicHeight,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-
-        // add the bus stop number to the right of the symbol
-        val textSize = 60f // adjust the text size as needed
-        val paint = Paint().apply {
-            color = Color.GREEN // set text color
-            isFakeBoldText = true // enable bold text
-            typeface = Typeface.DEFAULT_BOLD // set bold typeface
-        }
-        val text = busStopNumber.toString()
-        val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
-        val y = canvas.height - 20f // adjust the vertical position to position the text below the symbol
-
-        canvas.drawText(text, x, y, paint)
-
-        return BitmapDrawable(resources, bitmap)
-    }
-
-
-
-
-    private fun generatePolyline() {
-        try {
-            val stream = assets.open("busRoute2.json")
-            val size = stream.available()
-            val buffer = ByteArray(size)
-            stream.read(buffer)
-            stream.close()
-            val strContent = String(buffer, StandardCharsets.UTF_8)
-            try {
-                val gson = Gson()
-                val typeToken = object : TypeToken<Map<String, List<Coordinate>>>() {}.type
-                routeData = gson.fromJson(strContent, typeToken)
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
-        } catch (ignored: IOException) {
-            Toast.makeText(
-                this@MainActivity,
-                "Oops, there is something wrong. Please try again.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // register sensor listeners for compass and accelerometer
-        sensorManager.registerListener(
-            sensorListener,
-            compassSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-        sensorManager.registerListener(
-            sensorListener,
-            acceleroSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
+    private fun publishPosition() {
+        val jsonObject = JSONObject()
+        jsonObject.put("latitude", latitude)
+        jsonObject.put("longitude", longitude)
+        jsonObject.put("bearing", bearing)
+        jsonObject.put("direction", direction)
+        jsonObject.put("speed", speed)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
+        notificationManager.showNotification(
+            channelId = "channel1",
+            notificationId = 1,
+            title = "Connected",
+            message = "Lat: $latitude, Long: $longitude, Direction: $direction",
+            false
         )
     }
 
-    override fun onPause() {
-        super.onPause()
-        // unregister sensor listeners when the activity is paused
-        sensorManager.unregisterListener(sensorListener)
+    private fun getDefaultConfigValue() {
+        latitude = intent.getDoubleExtra("lat", 0.0)
+        longitude = intent.getDoubleExtra("lng", 0.0)
+        bearing = intent.getFloatExtra("ber", 0.0F)
+        speed = intent.getFloatExtra("spe", 0.0F)
+        direction = intent.getStringExtra("dir").toString()
+        lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
     }
 
-    private fun connectMQTTClient(options: MqttConnectOptions) {
-        try {
-            mqttClient.connect(options)
-            subscribeToTopic()
-        } catch (e: MqttException) {
-            e.printStackTrace()
-        }
-    }
-
-    // callback function to pusblish mqtt messages
-    private fun publishMessage(msg: String) {
-        try {
-            val message = MqttMessage()
-            message.payload = msg.toByteArray()
-            message.qos = 1
-            message.isRetained = false
-            mqttClient.publish(topic, message)
-            mqttClient.setCallback(object : MqttCallback {
-                override fun connectionLost(cause: Throwable?) {
-                    TODO("Not yet implemented")
-                }
-
-                override fun messageArrived(topic: String?, message: MqttMessage?) {
-                    Log.d("Message Arrived", "Message Arrived")
-                }
-
-                override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                    Log.d("Delivery Complete", "Message sent")
-                    showNotification()
-                }
-
-            })
-        } catch (e: MqttException) {
-            e.printStackTrace()
-        }
-    }
-
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent?) {
-            val alpha = 0.97f
-            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
-                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
-                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
-            }
-            if (event!!.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
-                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
-                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
-            }
-            val R = FloatArray(9)
-            val I = FloatArray(9)
-            
-            val success = SensorManager.getRotationMatrix(R, I, mAccelerometer, mGeomagneic)
-            if (success) {
-                val orientation = FloatArray(3)
-                SensorManager.getOrientation(R, orientation)
-                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-                bearing = (bearing + 360) % 360
-                direction = Helper.bearingToDirection(bearing)
-            }
-        }
-
-        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-            // TODO: handle accuracy 
-        }
-
-    }
-
-    private fun showNotification() {
-        val notificationManageer = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "My Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            notificationManageer.createNotificationChannel(channel)
-        }
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Connected")
-            .setSmallIcon(R.drawable.ic_signal)
-            .setContentText("Lat: $lat, Long: $lon, Direction: $direction")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(false)
-            .setSubText("Data Send")
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] per8missions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            // handle permission for post notifications here if needed
-            return
-        }
-        NotificationManagerCompat.from(this).notify(1, builder.build())
-    }
-
-    private fun subscribeToTopic() {
-        try {
-            mqttClient.subscribe(topic) { topic, message ->
-                val msg = message?.payload?.toString()
-                Log.d("LOCATION", msg!!)
-            }
-            mqttClient.subscribe("v1/devices/me/attributes/response/+") { topic, message ->
-                val msg = message?.payload?.toString()
-                Log.d("LOCATION", msg!!)
-            }
-        } catch (e: MqttException) {
-            e.printStackTrace()
-        }
+    private fun getMessageCount() {
+        totalMessage = sharedPrefMananger.getMessageList(MSG_KEY).size
+        binding.notificationBadge.text = totalMessage.toString()
     }
 
     override fun onDestroy() {
+        soundManager.stopSound()
+        mqttManager.disconnect()
         super.onDestroy()
-        try {
-            mqttClient.disconnect()
-        } catch (e: MqttException) {
-            e.printStackTrace()
-        }
     }
 
     companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 123
+        private const val SERVER_URI = "tcp://43.226.218.94:1883"
+        private const val CLIENT_ID = "jasonAndroidClientId"
+        private const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
+        private const val SUB_MSG_TOPIC = "v1/devices/me/attributes/response/+"
+        private const val PUB_MSG_TOPIC = "v1/devices/me/attributes/request/1"
+        private const val REQUEST_PERIODIC_TIME = 1000L
+        private const val PUBLISH_POSITION_TIME = 1000L
+        private const val LAST_MSG_KEY = "lastMessageKey"
+        private const val MSG_KEY = "messageKey"
+        private const val SOUND_FILE_NAME = "notif.wav"
     }
 }
