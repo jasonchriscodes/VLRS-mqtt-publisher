@@ -24,6 +24,7 @@ import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
@@ -156,6 +157,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.map.apply {
             setTileSource(TileSourceFactory.MAPNIK)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             mapCenter
             setMultiTouchControls(true)
             getLocalVisibleRect(Rect())
@@ -181,7 +183,8 @@ class MainActivity : AppCompatActivity() {
         val overlayItems = ArrayList<OverlayItem>()
         busStop.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+//            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",

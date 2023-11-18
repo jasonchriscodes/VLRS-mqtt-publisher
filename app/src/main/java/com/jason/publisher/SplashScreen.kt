@@ -121,8 +121,8 @@ class SplashScreen : AppCompatActivity() {
         val gson = Gson()
         val busData = gson.fromJson(data, Bus::class.java)
         if (isOffline) {
-            routesAndStops["routes"] = busData.shared!!.busRoute1!!
-            routesAndStops["stops"] = busData.shared.busStop1!!
+            routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
+            routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
         } else {
             routesAndStops["routes"] = busData.shared!!.busRoute!!
             routesAndStops["stops"] = busData.shared.busStop!!

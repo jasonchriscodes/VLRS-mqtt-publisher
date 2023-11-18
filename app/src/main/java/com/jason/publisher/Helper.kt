@@ -77,20 +77,20 @@ object Helper {
             Bitmap.Config.ARGB_8888
         )
         val canvas = Canvas(bitmap)
-        drawable.draw(canvas)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
 
         // add the bus stop number to the right of the symbol
+        val textSize = 40f // adjust the text size as needed
         val paint = Paint().apply {
-            color = Color.GREEN // set text color
+            color = Color.WHITE // set text color
             isFakeBoldText = true // enable bold text
             typeface = Typeface.DEFAULT_BOLD // set bold typeface
+            setTextSize(textSize)
         }
         val text = busStopNumber.toString()
-        val x =
-            (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
-        val y =
-            canvas.height - 20f // adjust the vertical position to position the text below the symbol
+        val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
+        val y = canvas.height - 30f // adjust the vertical position to position the text below the symbol
 
         canvas.drawText(text, x, y, paint)
 
