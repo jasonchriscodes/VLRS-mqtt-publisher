@@ -2,7 +2,10 @@ package com.jason.publisher
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
+import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -10,11 +13,14 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivityOfflineBinding
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusRoute
+import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
 import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.NotificationManager
@@ -24,10 +30,14 @@ import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapController
+import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.OverlayItem
+import org.osmdroid.views.overlay.Polyline
 
-class OfflineActivity: AppCompatActivity() {
+class OfflineActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOfflineBinding
     private lateinit var mqttManager: MqttManager
@@ -59,7 +69,8 @@ class OfflineActivity: AppCompatActivity() {
         binding = ActivityOfflineBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
+        Configuration.getInstance()
+            .load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -85,7 +96,7 @@ class OfflineActivity: AppCompatActivity() {
 
     private fun requestAdminMessage() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys","message")
+        jsonObject.put("sharedKeys", "message")
         val jsonString = jsonObject.toString()
         val handler = Handler(Looper.getMainLooper())
         handler.post(object : Runnable {
@@ -140,36 +151,97 @@ class OfflineActivity: AppCompatActivity() {
     }
 
     private fun startLocationUpdate() {
-        var index = 0
-        val busData = intent.getStringExtra(Constant.busDataKey)
-        val gson = Gson()
-        val data = gson.fromJson(busData, Bus::class.java)
-        val routes = data.shared!!.busRoute!!.jsonMember1
-        val stops = data.shared.busStop!!.jsonMember1
-        routes!!.forEach {
+        var isForward = true // Flag to indicate the direction of movement, true for forward, false for backward
+        var routeIndex = 0 // Initialize index at the start
+
+        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+        (busData["routes"] as BusRoute).jsonMember1!!.forEach {
             busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
         }
-        stops!!.forEach {
+        latitude = busRoute[routeIndex].latitude
+        longitude = busRoute[routeIndex].longitude
+        val stops = busData["stops"] as BusStop
+        stops.jsonMember1!!.forEach {
             busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
         }
+
+        generatePolyline()
+        generateBusStop()
+
         val handler = Handler(Looper.getMainLooper())
+
         handler.post(object : Runnable {
             override fun run() {
-                latitude = busRoute[index].latitude
-                longitude = busRoute[index].longitude
-                if (index != 0) {
+                latitude = busRoute[routeIndex].latitude
+                longitude = busRoute[routeIndex].longitude
+
+                // Calculate speed if index is not at the beginning
+                if (routeIndex != 0) {
                     speed = Helper.calculateSpeed(
                         latitude,
                         longitude,
-                        busRoute[index - 1].latitude,
-                        busRoute[index - 1].longitude,
+                        busRoute[routeIndex - 1].latitude,
+                        busRoute[routeIndex - 1].longitude,
                         PUBLISH_POSITION_TIME
-                    ).toFloat()
+                    )
                 }
-                index++
+
+                // Determine the direction of index movement
+                if (isForward) { // If moving forward
+                    routeIndex++
+                    if (routeIndex == busRoute.size - 1) {
+                        isForward = false // Change direction to backward if reached upper limit
+                    }
+                } else { // If moving backward
+                    routeIndex--
+                    if (routeIndex == 0) {
+                        isForward = true // Change direction to forward if reached lower limit
+                    }
+                }
+
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         })
+
+    }
+
+    private fun generateBusStop() {
+        val overlayItems = ArrayList<OverlayItem>()
+        busStop.forEachIndexed { index, geoPoint ->
+            Log.d("BUS STOP", geoPoint.toString())
+            val busStopNumber = index + 1
+            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+            val marker = OverlayItem(
+                "Bus Stop $busStopNumber",
+                "Description",
+                geoPoint
+            )
+            marker.setMarker(busStopSymbol)
+            overlayItems.add(marker)
+        }
+        val overlayItem = ItemizedIconOverlay(
+            overlayItems,
+            object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+                override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+                    return true
+                }
+                override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                    return false
+                }
+            },
+            applicationContext
+        )
+        binding.map.overlays.add(overlayItem)
+    }
+
+    private fun generatePolyline() {
+        val polyline = Polyline()
+        polyline.setPoints(busRoute)
+        polyline.outlinePaint.color = Color.BLUE
+        polyline.outlinePaint.strokeWidth = 5f
+
+        binding.map.overlays.add(polyline)
+        binding.map.invalidate()
     }
 
     private fun mapViewSetup() {
@@ -184,8 +256,9 @@ class OfflineActivity: AppCompatActivity() {
         mapController.setZoom(18.0)
 
         binding.map.apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             mapCenter
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             setMultiTouchControls(true)
             getLocalVisibleRect(Rect())
         }

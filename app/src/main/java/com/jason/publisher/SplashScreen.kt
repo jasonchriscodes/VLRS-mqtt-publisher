@@ -10,12 +10,15 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivitySplashScreenBinding
+import com.jason.publisher.model.Bus
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.ModeSelectionDialog
 import com.jason.publisher.services.MqttManager
@@ -74,7 +77,6 @@ class SplashScreen : AppCompatActivity() {
         // subscribe to a MQTT topic for attribute responses and update UI accordingly
         mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
             data = message
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
         requestData()
     }
@@ -89,11 +91,15 @@ class SplashScreen : AppCompatActivity() {
         modeSelectionDialog.showModeSelectionDialog(object : ModeSelectionDialog.ModeSelectionListener {
             override fun onModeSelected(mode: String) {
                 var intent = Intent(this@SplashScreen, MainActivity::class.java)
+                val busData: HashMap<String, Any>
                 if (mode == "Offline") {
                     intent = Intent(this@SplashScreen, OfflineActivity::class.java)
+                    busData = getRoutesAndStops(true)
+                } else {
+                    busData = getRoutesAndStops(false)
                 }
 
-                intent.putExtra(Constant.busDataKey, data)
+                intent.putExtra(Constant.busDataKey, busData)
                 intent.putExtra(Constant.deviceNameKey, name)
                 intent.putExtra(Constant.tokenKey, accessToken)
                 intent.putExtra(Constant.aidKey, mId)
@@ -108,6 +114,20 @@ class SplashScreen : AppCompatActivity() {
                 finish()
             }
         })
+    }
+
+    private fun getRoutesAndStops(isOffline: Boolean): HashMap<String, Any> {
+        val routesAndStops = HashMap<String, Any>()
+        val gson = Gson()
+        val busData = gson.fromJson(data, Bus::class.java)
+        if (isOffline) {
+            routesAndStops["routes"] = busData.shared!!.busRoute1!!
+            routesAndStops["stops"] = busData.shared.busStop1!!
+        } else {
+            routesAndStops["routes"] = busData.shared!!.busRoute!!
+            routesAndStops["stops"] = busData.shared.busStop!!
+        }
+        return routesAndStops
     }
 
     private fun startLocationUpdate() {
@@ -136,7 +156,7 @@ class SplashScreen : AppCompatActivity() {
 
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute2,busStop2")
+        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }

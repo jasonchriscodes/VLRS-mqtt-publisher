@@ -1,5 +1,14 @@
 package com.jason.publisher
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -44,9 +53,9 @@ object Helper {
         secondLat: Double,
         secondLong: Double,
         delayInMillis: Long
-    ): Double {
+    ): Float {
         val distance = haversine(firstLat, firstLong, secondLat, secondLong)
-        return distance * 1000 / (delayInMillis / 1000)
+        return (distance * 1000 / (delayInMillis / 1000)).toFloat()
     }
 
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -57,5 +66,34 @@ object Helper {
                 sin(deltaLon / 2) * sin(deltaLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return 6371 * c // radius of the Earth in kilometers
+    }
+
+    fun createBusStopSymbol(context: Context, busStopNumber: Int): Drawable {
+        // create a custom drawable with the bus stop number
+        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_bus_stop) as BitmapDrawable
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.draw(canvas)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+
+        // add the bus stop number to the right of the symbol
+        val paint = Paint().apply {
+            color = Color.GREEN // set text color
+            isFakeBoldText = true // enable bold text
+            typeface = Typeface.DEFAULT_BOLD // set bold typeface
+        }
+        val text = busStopNumber.toString()
+        val x =
+            (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
+        val y =
+            canvas.height - 20f // adjust the vertical position to position the text below the symbol
+
+        canvas.drawText(text, x, y, paint)
+
+        return BitmapDrawable(context.resources, bitmap)
     }
 }

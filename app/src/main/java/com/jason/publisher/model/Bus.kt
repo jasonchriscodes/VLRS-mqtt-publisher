@@ -1,6 +1,8 @@
 package com.jason.publisher.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
 data class Bus(
 
@@ -8,6 +10,7 @@ data class Bus(
 	val shared: Shared? = null
 )
 
+@Parcelize
 data class JsonMember1Item(
 
 	@field:SerializedName("latitude")
@@ -15,10 +18,16 @@ data class JsonMember1Item(
 
 	@field:SerializedName("longitude")
 	val longitude: Double? = null
-)
+): Parcelable
 
 data class Shared(
 
+	@field:SerializedName("busStop")
+	val busStop1: BusStop? = null,
+
+	@field:SerializedName("busRoute")
+	val busRoute1: BusRoute? = null,
+	
 	@field:SerializedName("busStop2")
 	val busStop: BusStop? = null,
 
@@ -29,14 +38,16 @@ data class Shared(
 	val message: String? = null
 )
 
+@Parcelize
 data class BusStop(
 
 	@field:SerializedName("1")
 	val jsonMember1: List<JsonMember1Item?>? = null
-)
+): Parcelable
 
+@Parcelize
 data class BusRoute(
 
 	@field:SerializedName("1")
 	val jsonMember1: List<JsonMember1Item?>? = null
-)
+): Parcelable

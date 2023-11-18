@@ -1,6 +1,7 @@
 package com.jason.publisher
 
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Rect
 import android.location.Location
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusRoute
+import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.MqttManager
@@ -22,7 +25,10 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
+import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.OverlayItem
+import org.osmdroid.views.overlay.Polyline
 
 class MainActivity : AppCompatActivity() {
 
@@ -156,6 +162,56 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateMarkerPosition(marker)
+        generatePolyline()
+    }
+
+    private fun generatePolyline() {
+        val busRoute = ArrayList<GeoPoint>()
+        val busStop = ArrayList<GeoPoint>()
+        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+        val routes = busData["routes"] as BusRoute
+        routes.jsonMember1!!.forEach {
+            busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+        }
+        val stops = busData["stops"] as BusStop
+        stops.jsonMember1!!.forEach {
+            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+        }
+
+        val overlayItems = ArrayList<OverlayItem>()
+        busStop.forEachIndexed { index, geoPoint ->
+            val busStopNumber = index + 1
+            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+            val marker = OverlayItem(
+                "Bus Stop $busStopNumber",
+                "Description",
+                geoPoint
+            )
+            marker.setMarker(busStopSymbol)
+            overlayItems.add(marker)
+        }
+        val overlayItem = ItemizedIconOverlay(
+            overlayItems,
+            object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
+                override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
+                    return true
+                }
+
+                override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
+                    return false
+                }
+            },
+            applicationContext
+        )
+        binding.map.overlays.add(overlayItem)
+
+        val polyline = Polyline()
+        polyline.setPoints(busRoute)
+        polyline.outlinePaint.color = Color.BLUE
+        polyline.outlinePaint.strokeWidth = 5f
+
+        binding.map.overlays.add(polyline)
+        binding.map.invalidate()
     }
 
     private fun updateMarkerPosition(marker: Marker) {
