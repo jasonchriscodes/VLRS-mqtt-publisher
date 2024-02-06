@@ -20,10 +20,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NavTrack"
         tools:targetApi="31">
-        <activity
-            android:name=".TestActivity"
-            android:screenOrientation="landscape"
-            android:exported="false" />
+<!--        <activity-->
+<!--            android:name=".TestActivity"-->
+<!--            android:screenOrientation="landscape"-->
+<!--            android:exported="false" />-->
         <activity
             android:name=".Contacts.ChatActivity"
             android:screenOrientation="landscape"
@@ -36,7 +36,7 @@
         <service android:name="org.eclipse.paho.android.service.MqttService" />
 
         <activity
-            android:name=".SplashScreen"
+            android:name=".TestActivity"
             android:exported="true"
             android:screenOrientation="landscape">
             <intent-filter>
