@@ -25,7 +25,7 @@ class TestActivity : AppCompatActivity() {
         )
 
         val connectOptions = MqttConnectOptions()
-        connectOptions.userName = "qI45RIAiIVpJ4Ubz5qQJ"
+        connectOptions.userName = "Tl4ZHLQUdpBiqnHEW8hh"
         connectOptions.isCleanSession = true
         connectOptions.connectionTimeout = 10
         connectOptions.keepAliveInterval = 60
