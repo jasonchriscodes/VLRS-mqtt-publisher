@@ -20,7 +20,7 @@ class TestActivity : AppCompatActivity() {
         binding = ActivityTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        mqttManager = MqttClient("tcp://demo.thingsboard.io", MainActivity.CLIENT_ID,
+        mqttManager = MqttClient(MainActivity.SERVER_URI, MainActivity.CLIENT_ID,
             org.eclipse.paho.client.mqttv3.persist.MemoryPersistence()
         )
 

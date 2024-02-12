@@ -19,6 +19,7 @@ import com.google.firebase.ktx.Firebase
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivitySplashScreenBinding
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusItem
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.ModeSelectionDialog
 import com.jason.publisher.services.MqttManager
@@ -37,6 +38,7 @@ class SplashScreen : AppCompatActivity() {
     private var accessToken = ""
     private var mId = ""
     private val db = Firebase.firestore
+    private lateinit var busItem: BusItem
 
     private var latitude = 0.0
     private var longitude = 0.0
@@ -53,6 +55,8 @@ class SplashScreen : AppCompatActivity() {
         modeSelectionDialog = ModeSelectionDialog(this)
 
         mId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//        Toast.makeText(this, mId, Toast.LENGTH_LONG).show()
+//        Log.d("mid bus a:", mId)
         sharedPrefMananger = SharedPrefMananger(this)
 
         val colRef = db.collection("config").get()
@@ -68,7 +72,7 @@ class SplashScreen : AppCompatActivity() {
 
         // initialize the MQTT manager with server URI and client ID
         mqttManager =
-            MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
+            MqttManager(serverUri = "tcp://demo.thingsboard.io", clientId = "jasonAndroidClientId")
         locationManager = LocationManager(this)
         startLocationUpdate()
 
@@ -120,6 +124,13 @@ class SplashScreen : AppCompatActivity() {
         val routesAndStops = HashMap<String, Any>()
         val gson = Gson()
         val busData = gson.fromJson(data, Bus::class.java)
+        val busses = busData.shared!!.config!!.busConfig
+        for (bus in busses) {
+            if (bus.aid == mId) {
+                accessToken = bus.accessToken
+                name = bus.bus
+            }
+        }
         if (isOffline) {
             routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
             routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
@@ -156,7 +167,7 @@ class SplashScreen : AppCompatActivity() {
 
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2")
+        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }

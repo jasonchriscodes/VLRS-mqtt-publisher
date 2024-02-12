@@ -7,11 +7,13 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusConfig
 import com.jason.publisher.model.BusRoute
 import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
@@ -46,9 +48,13 @@ class MainActivity : AppCompatActivity() {
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = "North"
+    private var busConfig = ""
 
     private var lastMessage = ""
     private var totalMessage = 0
+
+    private var busName = ""
+    private var token = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,13 +63,16 @@ class MainActivity : AppCompatActivity() {
 
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
 
-        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID)
+
         locationManager = LocationManager(this)
         sharedPrefMananger = SharedPrefMananger(this)
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
 
+        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+
         getDefaultConfigValue()
+        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
         getMessageCount()
         startLocationUpdate()
         mapViewSetup()
@@ -239,6 +248,8 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("bearing", bearing)
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
+        jsonObject.put("bus", busConfig)
+        Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
         notificationManager.showNotification(
@@ -257,6 +268,10 @@ class MainActivity : AppCompatActivity() {
         speed = intent.getFloatExtra("spe", 0.0F)
         direction = intent.getStringExtra("dir").toString()
         lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
+
+        val aid = intent.getStringExtra(Constant.aidKey)
+        busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
+        token = intent.getStringExtra(Constant.tokenKey).toString()
     }
 
     private fun getMessageCount() {
@@ -271,7 +286,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val SERVER_URI = "tcp://43.226.218.94:1883"
+        const val SERVER_URI = "tcp://demo.thingsboard.io"
         const val CLIENT_ID = "jasonAndroidClientId"
         const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
         private const val SUB_MSG_TOPIC = "v1/devices/me/attributes/response/+"
