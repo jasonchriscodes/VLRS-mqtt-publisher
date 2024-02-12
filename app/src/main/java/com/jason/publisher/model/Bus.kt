@@ -35,8 +35,31 @@ data class Shared(
     val busRoute: BusRoute? = null,
 
     @field:SerializedName("message")
-    val message: String? = null
+    val message: String? = null,
+
+    @field:SerializedName("config")
+    val config: BusConfig? = null
 )
+
+@Parcelize
+data class BusConfig(
+    @field:SerializedName("busConfig")
+    val busConfig: List<BusItem>
+
+) : Parcelable
+
+@Parcelize
+data class BusItem(
+    @field:SerializedName("aid")
+    val aid: String,
+
+    @field:SerializedName("bus")
+    val bus: String,
+
+    @field:SerializedName("accessToken")
+    val accessToken: String
+
+) : Parcelable
 
 @Parcelize
 data class BusStop(

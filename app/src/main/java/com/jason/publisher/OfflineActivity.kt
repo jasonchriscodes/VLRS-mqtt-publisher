@@ -62,6 +62,7 @@ class OfflineActivity : AppCompatActivity() {
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = "North"
+    private var busConfig = ""
 
     private var busRoute = ArrayList<GeoPoint>()
     private var busStop = ArrayList<GeoPoint>()
@@ -89,11 +90,11 @@ class OfflineActivity : AppCompatActivity() {
         acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         // initialize each service used
-        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID)
+        val token = intent.getStringExtra(Constant.tokenKey)
+        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token!!)
         sharedPrefMananger = SharedPrefMananger(this)
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
-
         getDefaultConfigValue()
         getMessageCount()
         startLocationUpdate()
@@ -391,8 +392,10 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("bearing", bearing)
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
+        jsonObject.put("bus", busConfig)
+        Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
-        mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
         notificationManager.showNotification(
             channelId = "channel1",
             notificationId = 1,
@@ -405,8 +408,15 @@ class OfflineActivity : AppCompatActivity() {
     // because this is offline mode,
     // the default value required is only the new message comparator
     private fun getDefaultConfigValue() {
-        // initialize the comparator of new message
+        latitude = intent.getDoubleExtra("lat", 0.0)
+        longitude = intent.getDoubleExtra("lng", 0.0)
+        bearing = intent.getFloatExtra("ber", 0.0F)
+        speed = intent.getFloatExtra("spe", 0.0F)
+        direction = intent.getStringExtra("dir").toString()
         lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
+
+        val aid = intent.getStringExtra(Constant.aidKey)
+        busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
     }
 
     private fun getMessageCount() {
@@ -478,9 +488,9 @@ class OfflineActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val SERVER_URI = "tcp://43.226.218.94:1883"
-        private const val CLIENT_ID = "jasonAndroidClientId"
-        private const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
+        const val SERVER_URI = "tcp://demo.thingsboard.io"
+        const val CLIENT_ID = "jasonAndroidClientId"
+        const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
         private const val SUB_MSG_TOPIC = "v1/devices/me/attributes/response/+"
         private const val PUB_MSG_TOPIC = "v1/devices/me/attributes/request/1"
         private const val REQUEST_PERIODIC_TIME = 1000L
