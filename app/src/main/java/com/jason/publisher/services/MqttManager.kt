@@ -32,6 +32,7 @@ class MqttManager(
 
     fun publish(topic: String, message: String, qos: Int = 0) {
         try {
+            Log.d("mqtt manager", "publish method call")
             val mqttMessage = MqttMessage(message.toByteArray())
             mqttMessage.qos = qos
             mqttMessage.isRetained = false

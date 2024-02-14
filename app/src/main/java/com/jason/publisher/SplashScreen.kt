@@ -114,6 +114,7 @@ class SplashScreen : AppCompatActivity() {
                 intent.putExtra("spe", speed)
                 intent.putExtra("dir", direction)
 
+                mqttManager.disconnect()
                 startActivity(intent)
                 finish()
             }
