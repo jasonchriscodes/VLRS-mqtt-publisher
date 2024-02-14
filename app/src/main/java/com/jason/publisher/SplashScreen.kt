@@ -72,7 +72,7 @@ class SplashScreen : AppCompatActivity() {
 
         // initialize the MQTT manager with server URI and client ID
         mqttManager =
-            MqttManager(serverUri = "tcp://demo.thingsboard.io", clientId = "jasonAndroidClientId")
+            MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
         locationManager = LocationManager(this)
         startLocationUpdate()
 
