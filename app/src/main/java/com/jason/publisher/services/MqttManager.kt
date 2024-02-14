@@ -10,7 +10,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 class MqttManager(
     serverUri: String,
     clientId: String,
-    username: String = "9HnzB9SspRMRFSECPEQX" // Bus A
+    username: String = "cngz9qqls7dk5zgi3y4j" // Bus A
 ) {
     private val persistence = MemoryPersistence()
     private val mqttClient = MqttClient(serverUri, clientId, persistence)
