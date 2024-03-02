@@ -36,7 +36,7 @@ class SplashScreen : AppCompatActivity() {
     private var data: String? = null
     var name = ""
     private var accessToken = ""
-    private var mId = ""
+    private var aaid = ""
     private val db = Firebase.firestore
     private lateinit var busItem: BusItem
 
@@ -54,15 +54,15 @@ class SplashScreen : AppCompatActivity() {
 
         modeSelectionDialog = ModeSelectionDialog(this)
 
-        mId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//        Toast.makeText(this, mId, Toast.LENGTH_LONG).show()
-//        Log.d("mid bus a:", mId)
+        aaid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+//        Toast.makeText(this, aaid, Toast.LENGTH_LONG).show()
+        Log.d("aaid bus a:", aaid)
         sharedPrefMananger = SharedPrefMananger(this)
 
         val colRef = db.collection("config").get()
         colRef.addOnSuccessListener { query ->
             for (doc in query.documents) {
-                if (doc.data!!["aid"] == mId) {
+                if (doc.data!!["aid"] == aaid) {
                     name = doc.data!!["name"].toString()
                     accessToken = doc.data!!["accessToken"].toString()
                     sharedPrefMananger.saveString(Constant.deviceNameKey, name)
@@ -102,11 +102,11 @@ class SplashScreen : AppCompatActivity() {
                 } else {
                     busData = getRoutesAndStops(false)
                 }
-
+                Log.d("busdata: ", busData.toString())
                 intent.putExtra(Constant.busDataKey, busData)
                 intent.putExtra(Constant.deviceNameKey, name)
                 intent.putExtra(Constant.tokenKey, accessToken)
-                intent.putExtra(Constant.aidKey, mId)
+                intent.putExtra(Constant.aidKey, aaid)
 
                 intent.putExtra("lat", latitude)
                 intent.putExtra("lng", longitude)
@@ -127,7 +127,7 @@ class SplashScreen : AppCompatActivity() {
         val busData = gson.fromJson(data, Bus::class.java)
         val busses = busData.shared!!.config!!.busConfig
         for (bus in busses) {
-            if (bus.aid == mId) {
+            if (bus.aid == aaid) {
                 accessToken = bus.accessToken
                 name = bus.bus
             }

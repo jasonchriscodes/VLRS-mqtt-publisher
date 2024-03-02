@@ -1,15 +1,10 @@
 package com.jason.publisher
 
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -18,12 +13,20 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.NumberPicker
+import android.widget.Spinner
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.Helper.createBusStopSymbol
 import com.jason.publisher.databinding.ActivityOfflineBinding
 import com.jason.publisher.model.Bus
@@ -76,6 +79,10 @@ class OfflineActivity : AppCompatActivity() {
     private var compassSensor: Sensor? = null
     private var acceleroSensor: Sensor? = null
 
+    private var hoursDeparture = 0
+    private var minutesDeparture = 0
+    private var showDepartureTime = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityOfflineBinding.inflate(layoutInflater)
@@ -96,17 +103,102 @@ class OfflineActivity : AppCompatActivity() {
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
         getDefaultConfigValue()
+
         getMessageCount()
-        startLocationUpdate()
-        mapViewSetup()
         subscribeAdminMessage()
         requestAdminMessage()
 
+        mapController = binding.map.controller as MapController
+        getBusRouteData()
+        val center = GeoPoint(busRoute[0].latitude, busRoute[0].longitude)
+        mapController.setCenter(center)
+        mapController.setZoom(18.0)
+
+        binding.map.apply {
+            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+            mapCenter
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+            setMultiTouchControls(true)
+            getLocalVisibleRect(Rect())
+        }
+
         binding.chatButton.setOnClickListener {
             // route to message list
-            val intent = Intent(this, TestActivity::class.java)
+            val intent = Intent(this, ChatActivity::class.java)
             startActivity(intent)
         }
+
+        // Set up spinner
+        val items = arrayOf("Yes", "No")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // Set click listener for pop-up button
+        binding.popUpButton.setOnClickListener {
+            showPopUpDialog()
+        }
+    }
+    private fun showPopUpDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.popup_dialog, null)
+        val spinner = dialogView.findViewById<Spinner>(R.id.spinnerShowTime)
+        val hoursPicker = dialogView.findViewById<NumberPicker>(R.id.hoursPicker)
+        val minutesPicker = dialogView.findViewById<NumberPicker>(R.id.minutesPicker)
+
+        // Options for the Spinner
+        val items = arrayOf("Yes", "No")
+
+        // ArrayAdapter for the Spinner
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // Set ArrayAdapter to the Spinner
+        spinner.adapter = adapter
+
+        // Initialize the NumberPickers
+        hoursPicker.minValue = 0
+        hoursPicker.maxValue = 1
+
+        minutesPicker.minValue = 0
+        minutesPicker.maxValue = 30
+
+        MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setPositiveButton("OK") { dialog, which ->
+                hoursDeparture = hoursPicker.value
+                minutesDeparture = minutesPicker.value
+                showDepartureTime = adapter.getItem(0).toString()
+                // Handle OK button click
+                mapViewSetup()
+                startLocationUpdate()
+//                Toast.makeText(this, departureTime, Toast.LENGTH_LONG).show()
+                publishDepartureTime()
+//                Toast.makeText(this, adapter.getItem(0), Toast.LENGTH_LONG).show()
+                publishShowDepartureTime()
+            }
+            .setNegativeButton("Cancel") { dialog, which ->
+                // Handle Cancel button click
+            }
+            .show()
+//        //bus delay function
+//        MaterialAlertDialogBuilder(this)
+//            .setView(dialogView)
+//            .setPositiveButton("OK") { dialog, which ->
+//                val selectedHour = hoursPicker.value
+//                val selectedMinute = minutesPicker.value
+//                val delayMillis = ((selectedHour * 60 + selectedMinute) * 60 * 1000).toLong() // Convert hours and minutes to milliseconds
+//
+//                // Handle OK button click
+//                mapViewSetup()
+//
+//                // Use Handler to delay the start of location updates
+//                Handler().postDelayed({
+//                    startLocationUpdate()
+//                }, delayMillis)
+//            }
+//            .setNegativeButton("Cancel") { dialog, which ->
+//                // Handle Cancel button click
+//            }
+//            .show()
     }
 
     private fun requestAdminMessage() {
@@ -193,7 +285,6 @@ class OfflineActivity : AppCompatActivity() {
         var routeIndex = 0 // Initialize index at the start
 
         val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
-        getBusRouteData()
         latitude = busRoute[routeIndex].latitude
         longitude = busRoute[routeIndex].longitude
         val stops = busData["stops"] as List<JsonMember1Item>
@@ -349,24 +440,9 @@ class OfflineActivity : AppCompatActivity() {
     }
 
     private fun mapViewSetup() {
-        val center = GeoPoint(latitude, longitude)
-
         val marker = Marker(binding.map)
         marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-
-        mapController = binding.map.controller as MapController
-        mapController.setCenter(center)
-        mapController.setZoom(18.0)
-
-        binding.map.apply {
-            setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
-            mapCenter
-            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-            setMultiTouchControls(true)
-            getLocalVisibleRect(Rect())
-        }
-
         updateMarkerPosition(marker)
     }
 
@@ -403,6 +479,30 @@ class OfflineActivity : AppCompatActivity() {
             message = "Lat: $latitude, Long: $longitude, Direction: $direction",
             false
         )
+    }
+
+    private fun publishDepartureTime(){
+        val jsonObject = JSONObject()
+        var departureTime = "$hoursDeparture:$minutesDeparture"
+        jsonObject.put("departureTime", departureTime)
+        Log.d("DepartureTime", departureTime)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
+        notificationManager.showNotification(
+            channelId = "channel2",
+            notificationId = 2,
+            title = "Depart in",
+            message = "$hoursDeparture hours and $minutesDeparture minutes",
+            false
+        )
+    }
+
+    private fun publishShowDepartureTime(){
+        val jsonObject = JSONObject()
+        jsonObject.put("showDepartureTime", showDepartureTime)
+        Log.d("ShowDepartureTime", showDepartureTime)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
     // because this is offline mode,
