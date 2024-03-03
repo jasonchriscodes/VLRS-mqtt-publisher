@@ -9,6 +9,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -19,6 +20,7 @@ import android.widget.ArrayAdapter
 import android.widget.NumberPicker
 import android.widget.Spinner
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
@@ -59,6 +61,7 @@ class OfflineActivity : AppCompatActivity() {
     private lateinit var soundManager: SoundManager
     private lateinit var mapController: MapController
     private lateinit var routeData: Map<String, List<Coordinate>>
+    private lateinit var busMarker: Marker
 
     private var latitude = 0.0
     private var longitude = 0.0
@@ -67,6 +70,7 @@ class OfflineActivity : AppCompatActivity() {
     private var direction = "North"
     private var busConfig = ""
 
+    private var routeIndex = 0 // Initialize index at the start
     private var busRoute = ArrayList<GeoPoint>()
     private var busStop = ArrayList<GeoPoint>()
 
@@ -82,7 +86,9 @@ class OfflineActivity : AppCompatActivity() {
     private var hoursDeparture = 0
     private var minutesDeparture = 0
     private var showDepartureTime = ""
+    private var isFirstTime = false
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityOfflineBinding.inflate(layoutInflater)
@@ -108,6 +114,7 @@ class OfflineActivity : AppCompatActivity() {
         subscribeAdminMessage()
         requestAdminMessage()
 
+        busMarker = Marker(binding.map)
         mapController = binding.map.controller as MapController
         getBusRouteData()
         val center = GeoPoint(busRoute[0].latitude, busRoute[0].longitude)
@@ -135,10 +142,18 @@ class OfflineActivity : AppCompatActivity() {
 
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
-            showPopUpDialog()
+            binding.popUpButton.setImageDrawable(getDrawable(R.drawable.ic_refresh))
+            if(!isFirstTime){
+                showPopUpDialog()
+            } else
+            {
+                this.recreate()
+            }
         }
     }
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun showPopUpDialog() {
+        isFirstTime = true
         val dialogView = layoutInflater.inflate(R.layout.popup_dialog, null)
         val spinner = dialogView.findViewById<Spinner>(R.id.spinnerShowTime)
         val hoursPicker = dialogView.findViewById<NumberPicker>(R.id.hoursPicker)
@@ -282,7 +297,6 @@ class OfflineActivity : AppCompatActivity() {
     private fun startLocationUpdate() {
         var isForward =
             true // Flag to indicate the direction of movement, true for forward, false for backward
-        var routeIndex = 0 // Initialize index at the start
 
         val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
         latitude = busRoute[routeIndex].latitude
@@ -296,8 +310,7 @@ class OfflineActivity : AppCompatActivity() {
         generateBusStop()
 
         val handler = Handler(Looper.getMainLooper())
-
-        handler.post(object : Runnable {
+        var updateRunnable = object : Runnable {
             override fun run() {
                 latitude = busRoute[routeIndex].latitude
                 longitude = busRoute[routeIndex].longitude
@@ -325,11 +338,13 @@ class OfflineActivity : AppCompatActivity() {
                         isForward = true // Change direction to forward if reached lower limit
                     }
                 }
-
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
-            }
-        })
-
+            }}
+//        if (!isFirstTime) {
+////            handler.removeCallbacks(updateRunnable)
+//            handler.removeCallbacksAndMessages(null)
+//        }
+        handler.post(updateRunnable)
     }
 
     private fun getBusRouteData() {
@@ -439,25 +454,36 @@ class OfflineActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun mapViewSetup() {
-        val marker = Marker(binding.map)
-        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        updateMarkerPosition(marker)
+        binding.map.overlays.remove(busMarker)
+        binding.map.invalidate()
+        busMarker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+        busMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        updateMarkerPosition()
+        routeIndex = 0
     }
 
-    private fun updateMarkerPosition(marker: Marker) {
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun updateMarkerPosition() {
         val handler = Handler(Looper.getMainLooper())
         val updateRunnable = object : Runnable {
             override fun run() {
-                marker.position = GeoPoint(latitude, longitude)
-                marker.rotation = bearing
-                binding.map.overlays.add(marker)
+                busMarker.position = GeoPoint(latitude, longitude)
+                busMarker.rotation = bearing
+                binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
                 publishPosition()
+                Log.d("updateMarker", "")
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
+//        if (!isFirstTime) {
+////            handler.removeCallbacks(updateRunnable)
+//            handler.removeCallbacksAndMessages(null)
+//        }
+//        Log.d("Cek Runnable", handler.hasCallbacks(updateRunnable).toString())
+
         handler.post(updateRunnable)
     }
 
