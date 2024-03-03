@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
+import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Bus
 import com.jason.publisher.model.BusConfig
@@ -80,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         requestAdminMessage()
 
         binding.chatButton.setOnClickListener {
-            val intent = Intent(this, TestActivity::class.java)
+            val intent = Intent(this, ChatActivity::class.java)
             startActivity(intent)
         }
     }
