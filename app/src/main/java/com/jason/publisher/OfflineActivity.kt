@@ -72,7 +72,7 @@ class OfflineActivity : AppCompatActivity() {
 
     private var routeIndex = 0 // Initialize index at the start
     private var busRoute = ArrayList<GeoPoint>()
-    private var busStop = ArrayList<GeoPoint>()
+            private var busStop = ArrayList<GeoPoint>()
 
     private var lastMessage = ""
     private var totalMessage = 0
@@ -85,7 +85,7 @@ class OfflineActivity : AppCompatActivity() {
 
     private var hoursDeparture = 0
     private var minutesDeparture = 0
-    private var showDepartureTime = ""
+    private var showDepartureTime = "No"
     private var isFirstTime = false
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -181,19 +181,18 @@ class OfflineActivity : AppCompatActivity() {
             .setPositiveButton("OK") { dialog, which ->
                 hoursDeparture = hoursPicker.value
                 minutesDeparture = minutesPicker.value
-                showDepartureTime = adapter.getItem(0).toString()
-                // Handle OK button click
+                showDepartureTime = spinner.selectedItem.toString()
+                Log.d("DepartureTime", showDepartureTime)
                 mapViewSetup()
                 startLocationUpdate()
-//                Toast.makeText(this, departureTime, Toast.LENGTH_LONG).show()
                 publishDepartureTime()
-//                Toast.makeText(this, adapter.getItem(0), Toast.LENGTH_LONG).show()
-                publishShowDepartureTime()
+                publishShowDepartureTime() // Added to publish the show departure time
             }
             .setNegativeButton("Cancel") { dialog, which ->
                 // Handle Cancel button click
             }
             .show()
+
 //        //bus delay function
 //        MaterialAlertDialogBuilder(this)
 //            .setView(dialogView)
@@ -473,7 +472,7 @@ class OfflineActivity : AppCompatActivity() {
                 busMarker.rotation = bearing
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
-                publishPosition()
+                publishTelemetryData()
                 Log.d("updateMarker", "")
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
@@ -487,7 +486,7 @@ class OfflineActivity : AppCompatActivity() {
         handler.post(updateRunnable)
     }
 
-    private fun publishPosition() {
+    private fun publishTelemetryData() {
         val jsonObject = JSONObject()
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
@@ -495,6 +494,7 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
         jsonObject.put("bus", busConfig)
+        jsonObject.put("showDepartureTime", showDepartureTime)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
