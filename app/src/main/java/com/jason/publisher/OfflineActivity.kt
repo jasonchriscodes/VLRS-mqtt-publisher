@@ -191,6 +191,7 @@ class OfflineActivity : AppCompatActivity() {
                 mapViewSetup()
                 startLocationUpdate()
                 publishShowDepartureTime() // Added to publish the show departure time
+                publishDepartureTime()
                 // Start the countdown timer
                 startCountdown()
             }
@@ -494,9 +495,9 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
         jsonObject.put("bus", busConfig)
-        jsonObject.put("showDepartureTimeTelemetry", showDepartureTime)
+        jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
-        Log.d("departureTimeTemetry:", departureTime)
+        Log.d("departureTimeTelemetry:", departureTime)
         Log.d("departureTimeShowTelemetry:", showDepartureTime)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
@@ -513,6 +514,14 @@ class OfflineActivity : AppCompatActivity() {
     private fun publishShowDepartureTime(){
         val jsonObject = JSONObject()
         jsonObject.put("showDepartureTime", showDepartureTime)
+        Log.d("ShowDepartureTime", showDepartureTime)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
+    }
+
+    private fun publishDepartureTime(){
+        val jsonObject = JSONObject()
+        jsonObject.put("departureTime", departureTime)
         Log.d("ShowDepartureTime", showDepartureTime)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
