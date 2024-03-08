@@ -11,6 +11,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -85,8 +86,11 @@ class OfflineActivity : AppCompatActivity() {
 
     private var hoursDeparture = 0
     private var minutesDeparture = 0
-    private var showDepartureTime = "No"
+    private var showDepartureTime = "Yes"
+    private var departureTime = "00:00"
     private var isFirstTime = false
+
+    private lateinit var timer: CountDownTimer
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -182,11 +186,12 @@ class OfflineActivity : AppCompatActivity() {
                 hoursDeparture = hoursPicker.value
                 minutesDeparture = minutesPicker.value
                 showDepartureTime = spinner.selectedItem.toString()
-                Log.d("DepartureTime", showDepartureTime)
+                Log.d("departureTimeDialog", showDepartureTime)
                 mapViewSetup()
                 startLocationUpdate()
-                publishDepartureTime()
                 publishShowDepartureTime() // Added to publish the show departure time
+                // Start the countdown timer
+                startCountdown()
             }
             .setNegativeButton("Cancel") { dialog, which ->
                 // Handle Cancel button click
@@ -477,14 +482,32 @@ class OfflineActivity : AppCompatActivity() {
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
-//        if (!isFirstTime) {
-////            handler.removeCallbacks(updateRunnable)
-//            handler.removeCallbacksAndMessages(null)
-//        }
-//        Log.d("Cek Runnable", handler.hasCallbacks(updateRunnable).toString())
-
         handler.post(updateRunnable)
     }
+
+    private fun startCountdown() {
+        val totalMinutes = hoursDeparture * 60 + minutesDeparture
+        val totalMillis = totalMinutes * 60 * 1000 // Convert total minutes to milliseconds
+
+        timer = object : CountDownTimer(totalMillis.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                // This method will be called every second
+                val hours = millisUntilFinished / (1000 * 60 * 60)
+                val minutes = (millisUntilFinished / (1000 * 60)) % 60
+                val seconds = (millisUntilFinished / 1000) % 60
+                departureTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                Log.d("departureTime", departureTime)
+            }
+
+            override fun onFinish() {
+                // This method will be called when the timer finishes
+                departureTime = "Timer finished"
+                Log.d("departureTime", "Timer finished")
+            }
+        }
+        timer.start()
+    }
+
 
     private fun publishTelemetryData() {
         val jsonObject = JSONObject()
@@ -494,7 +517,10 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
         jsonObject.put("bus", busConfig)
-        jsonObject.put("showDepartureTime", showDepartureTime)
+        jsonObject.put("showDepartureTimeTelemetry", showDepartureTime)
+        jsonObject.put("departureTime", departureTime)
+        Log.d("departureTimeTemetry:", departureTime)
+        Log.d("departureTimeShowTelemetry:", showDepartureTime)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
@@ -503,22 +529,6 @@ class OfflineActivity : AppCompatActivity() {
             notificationId = 1,
             title = "Connected",
             message = "Lat: $latitude, Long: $longitude, Direction: $direction",
-            false
-        )
-    }
-
-    private fun publishDepartureTime(){
-        val jsonObject = JSONObject()
-        var departureTime = "$hoursDeparture:$minutesDeparture"
-        jsonObject.put("departureTime", departureTime)
-        Log.d("DepartureTime", departureTime)
-        val jsonString = jsonObject.toString()
-        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
-        notificationManager.showNotification(
-            channelId = "channel2",
-            notificationId = 2,
-            title = "Depart in",
-            message = "$hoursDeparture hours and $minutesDeparture minutes",
             false
         )
     }
