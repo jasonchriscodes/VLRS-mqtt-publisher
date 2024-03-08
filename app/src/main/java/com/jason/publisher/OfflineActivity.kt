@@ -1,5 +1,6 @@
 package com.jason.publisher
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
@@ -197,27 +198,6 @@ class OfflineActivity : AppCompatActivity() {
                 // Handle Cancel button click
             }
             .show()
-
-//        //bus delay function
-//        MaterialAlertDialogBuilder(this)
-//            .setView(dialogView)
-//            .setPositiveButton("OK") { dialog, which ->
-//                val selectedHour = hoursPicker.value
-//                val selectedMinute = minutesPicker.value
-//                val delayMillis = ((selectedHour * 60 + selectedMinute) * 60 * 1000).toLong() // Convert hours and minutes to milliseconds
-//
-//                // Handle OK button click
-//                mapViewSetup()
-//
-//                // Use Handler to delay the start of location updates
-//                Handler().postDelayed({
-//                    startLocationUpdate()
-//                }, delayMillis)
-//            }
-//            .setNegativeButton("Cancel") { dialog, which ->
-//                // Handle Cancel button click
-//            }
-//            .show()
     }
 
     private fun requestAdminMessage() {
@@ -344,10 +324,6 @@ class OfflineActivity : AppCompatActivity() {
                 }
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }}
-//        if (!isFirstTime) {
-////            handler.removeCallbacks(updateRunnable)
-//            handler.removeCallbacksAndMessages(null)
-//        }
         handler.post(updateRunnable)
     }
 
@@ -509,6 +485,7 @@ class OfflineActivity : AppCompatActivity() {
     }
 
 
+    @SuppressLint("LongLogTag")
     private fun publishTelemetryData() {
         val jsonObject = JSONObject()
         jsonObject.put("latitude", latitude)
