@@ -11,6 +11,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -72,7 +73,7 @@ class OfflineActivity : AppCompatActivity() {
 
     private var routeIndex = 0 // Initialize index at the start
     private var busRoute = ArrayList<GeoPoint>()
-    private var busStop = ArrayList<GeoPoint>()
+            private var busStop = ArrayList<GeoPoint>()
 
     private var lastMessage = ""
     private var totalMessage = 0
@@ -85,8 +86,11 @@ class OfflineActivity : AppCompatActivity() {
 
     private var hoursDeparture = 0
     private var minutesDeparture = 0
-    private var showDepartureTime = ""
+    private var showDepartureTime = "Yes"
+    private var departureTime = "00:00"
     private var isFirstTime = false
+
+    private lateinit var timer: CountDownTimer
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -181,19 +185,19 @@ class OfflineActivity : AppCompatActivity() {
             .setPositiveButton("OK") { dialog, which ->
                 hoursDeparture = hoursPicker.value
                 minutesDeparture = minutesPicker.value
-                showDepartureTime = adapter.getItem(0).toString()
-                // Handle OK button click
+                showDepartureTime = spinner.selectedItem.toString()
+                Log.d("departureTimeDialog", showDepartureTime)
                 mapViewSetup()
                 startLocationUpdate()
-//                Toast.makeText(this, departureTime, Toast.LENGTH_LONG).show()
-                publishDepartureTime()
-//                Toast.makeText(this, adapter.getItem(0), Toast.LENGTH_LONG).show()
-                publishShowDepartureTime()
+                publishShowDepartureTime() // Added to publish the show departure time
+                // Start the countdown timer
+                startCountdown()
             }
             .setNegativeButton("Cancel") { dialog, which ->
                 // Handle Cancel button click
             }
             .show()
+
 //        //bus delay function
 //        MaterialAlertDialogBuilder(this)
 //            .setView(dialogView)
@@ -473,21 +477,39 @@ class OfflineActivity : AppCompatActivity() {
                 busMarker.rotation = bearing
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
-                publishPosition()
+                publishTelemetryData()
                 Log.d("updateMarker", "")
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
-//        if (!isFirstTime) {
-////            handler.removeCallbacks(updateRunnable)
-//            handler.removeCallbacksAndMessages(null)
-//        }
-//        Log.d("Cek Runnable", handler.hasCallbacks(updateRunnable).toString())
-
         handler.post(updateRunnable)
     }
 
-    private fun publishPosition() {
+    private fun startCountdown() {
+        val totalMinutes = hoursDeparture * 60 + minutesDeparture
+        val totalMillis = totalMinutes * 60 * 1000 // Convert total minutes to milliseconds
+
+        timer = object : CountDownTimer(totalMillis.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                // This method will be called every second
+                val hours = millisUntilFinished / (1000 * 60 * 60)
+                val minutes = (millisUntilFinished / (1000 * 60)) % 60
+                val seconds = (millisUntilFinished / 1000) % 60
+                departureTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                Log.d("departureTime", departureTime)
+            }
+
+            override fun onFinish() {
+                // This method will be called when the timer finishes
+                departureTime = "Timer finished"
+                Log.d("departureTime", "Timer finished")
+            }
+        }
+        timer.start()
+    }
+
+
+    private fun publishTelemetryData() {
         val jsonObject = JSONObject()
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
@@ -495,6 +517,10 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
         jsonObject.put("bus", busConfig)
+        jsonObject.put("showDepartureTimeTelemetry", showDepartureTime)
+        jsonObject.put("departureTime", departureTime)
+        Log.d("departureTimeTemetry:", departureTime)
+        Log.d("departureTimeShowTelemetry:", showDepartureTime)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
@@ -503,22 +529,6 @@ class OfflineActivity : AppCompatActivity() {
             notificationId = 1,
             title = "Connected",
             message = "Lat: $latitude, Long: $longitude, Direction: $direction",
-            false
-        )
-    }
-
-    private fun publishDepartureTime(){
-        val jsonObject = JSONObject()
-        var departureTime = "$hoursDeparture:$minutesDeparture"
-        jsonObject.put("departureTime", departureTime)
-        Log.d("DepartureTime", departureTime)
-        val jsonString = jsonObject.toString()
-        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
-        notificationManager.showNotification(
-            channelId = "channel2",
-            notificationId = 2,
-            title = "Depart in",
-            message = "$hoursDeparture hours and $minutesDeparture minutes",
             false
         )
     }
