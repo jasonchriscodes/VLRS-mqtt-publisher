@@ -15,6 +15,7 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -33,10 +34,15 @@ import com.google.gson.reflect.TypeToken
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.Helper.createBusStopSymbol
 import com.jason.publisher.databinding.ActivityOfflineBinding
+import com.jason.publisher.model.AttributesData
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusItem
 import com.jason.publisher.model.Coordinate
 import com.jason.publisher.model.JsonMember1Item
 import com.jason.publisher.model.Message
+import com.jason.publisher.services.ApiService
+import com.jason.publisher.services.ApiServiceBuilder
+import com.jason.publisher.services.ClientAttributesResponse
 import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.NotificationManager
 import com.jason.publisher.services.SharedPrefMananger
@@ -51,6 +57,9 @@ import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 
@@ -92,6 +101,12 @@ class OfflineActivity : AppCompatActivity() {
     private var isFirstTime = false
 
     private lateinit var timer: CountDownTimer
+    private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
+    private var clientKeys = "latitude,longitude,bearing, speed, direction"
+    val handler = Handler(Looper.getMainLooper())
+    private var sharedBus = ArrayList<String> ()
+    private lateinit var arrBusData : List<BusItem>
+    private var markerBus = HashMap<String, Marker>()
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -192,6 +207,7 @@ class OfflineActivity : AppCompatActivity() {
                 startLocationUpdate()
                 publishShowDepartureTime() // Added to publish the show departure time
                 publishDepartureTime()
+                sendDataAttributes()
                 // Start the countdown timer
                 startCountdown()
             }
@@ -439,7 +455,7 @@ class OfflineActivity : AppCompatActivity() {
     private fun mapViewSetup() {
         binding.map.overlays.remove(busMarker)
         binding.map.invalidate()
-        busMarker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+        busMarker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus2, null)
         busMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         updateMarkerPosition()
         routeIndex = 0
@@ -450,6 +466,10 @@ class OfflineActivity : AppCompatActivity() {
         val handler = Handler(Looper.getMainLooper())
         val updateRunnable = object : Runnable {
             override fun run() {
+                val attributesData = AttributesData(latitude, longitude, bearing, speed, direction)
+                Log.d("attributesData", attributesData.toString())
+                postAttributes(apiService, mqttManager.getUsername(), attributesData)
+                Log.d("Mqttmanager", mqttManager.getUsername())
                 busMarker.position = GeoPoint(latitude, longitude)
                 busMarker.rotation = bearing
                 binding.map.overlays.add(busMarker)
@@ -461,6 +481,31 @@ class OfflineActivity : AppCompatActivity() {
         }
         handler.post(updateRunnable)
     }
+
+//    private fun getAttributes(apiService: ApiService, accessToken: String, clientKeys: String) {
+//        val call = apiService.getAttributes(
+//            "${ApiService.BASE_URL}$accessToken/attributes",
+//            "application/json",
+//            clientKeys
+//        )
+//        call.enqueue(object : Callback<ClientAttributesResponse> {
+//            override fun onResponse(call: Call<ClientAttributesResponse>, response: Response<ClientAttributesResponse>) {
+//                if (response.isSuccessful) {
+//                    val clientAttributes = response.body()
+//                    binding.attribute21.text = clientAttributes?.client?.attribute1.toString()
+//                    binding.attribute22.text = clientAttributes?.client?.attribute2.toString()
+//                    binding.attribute23.text = clientAttributes?.client?.attribute3.toString()
+//                } else {
+//                    Log.d("Request failed","${response.errorBody()?.string()}")
+//                    Toast.makeText(this@OfflineActivity, "Request failed: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//
+//            override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
+//                Toast.makeText(this@MainActivity, "Request failed: ${t.message}", Toast.LENGTH_SHORT).show()
+//            }
+//        })
+//    }
 
     private fun startCountdown() {
         val totalMinutes = hoursDeparture * 60 + minutesDeparture
@@ -527,6 +572,30 @@ class OfflineActivity : AppCompatActivity() {
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
+    private fun postAttributes(apiService: ApiService, accessToken: String, attributesData: AttributesData) {
+        val call = apiService.postAttributes(
+            "${ApiService.BASE_URL}$accessToken/attributes",
+            "application/json",
+            attributesData
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Log.d("Request successful","${response.body()}")
+                } else {
+                    Log.d("Request failed","${response.errorBody()}")
+                    Toast.makeText(this@OfflineActivity, "Request failed: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
+                    Log.d("Request failed code","${response.code()}")
+                    Log.d("Request failed message","${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(this@OfflineActivity, "Request failed: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
     // because this is offline mode,
     // the default value required is only the new message comparator
     private fun getDefaultConfigValue() {
@@ -539,7 +608,68 @@ class OfflineActivity : AppCompatActivity() {
 
         val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
+
+        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+        arrBusData = busData["sharedBus"] as List<BusItem>
+        arrBusData = arrBusData.filter { it.aid != aid }
+        for (bus in arrBusData) {
+            markerBus[bus.accessToken] = Marker(binding.map)
+            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+            markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        }
+
     }
+
+    private fun sendDataAttributes(){
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                for (bus in arrBusData) {
+                    getAttributes(apiService, bus.accessToken, clientKeys)
+                }
+                handler.postDelayed(this, 3000)
+            }
+        }, 0)
+    }
+
+    private fun getAttributes(apiService: ApiService, token: String, clientKeys: String) {
+        Log.d("getAttribute: ", "test1")
+        Log.d("token: ", token)
+        val call = apiService.getAttributes(
+            "${ApiService.BASE_URL}$token/attributes",
+            "application/json",
+            clientKeys
+        )
+        call.enqueue(object : Callback<ClientAttributesResponse> {
+            override fun onResponse(call: Call<ClientAttributesResponse>, response: Response<ClientAttributesResponse>) {
+                Log.d("Attribute Data", response.body().toString())
+                if (response.isSuccessful) {
+                    if (response.body()?.client != null){
+                        val lat = response.body()?.client?.latitude ?: 0.0
+                        val lon = response.body()!!.client.longitude ?: 0.0
+                        val ber = response.body()!!.client.bearing ?: 0.0F
+                        for (bus in arrBusData) {
+                            if (token == bus.accessToken) {
+                                markerBus[token]!!.position = GeoPoint(lat, lon)
+                                markerBus[token]!!.rotation = ber
+                                binding.map.overlays.add(markerBus[token])
+                                binding.map.invalidate()
+                            }
+                        }
+                    }
+
+                } else {
+                    Log.d("request data bus", response.message().toString())
+                }
+            }
+
+            override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
+                TODO("Not yet implemented")
+            }
+
+        })
+    }
+
 
     private fun getMessageCount() {
         // sets the value of the textview

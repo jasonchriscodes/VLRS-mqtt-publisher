@@ -132,12 +132,15 @@ class SplashScreen : AppCompatActivity() {
                 name = bus.bus
             }
         }
+                Log.d("arraybus: ", busses.toString())
         if (isOffline) {
             routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
             routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
+            routesAndStops["sharedBus"] = busses
         } else {
             routesAndStops["routes"] = busData.shared!!.busRoute!!
             routesAndStops["stops"] = busData.shared.busStop!!
+            routesAndStops["sharedBus"] = busses
         }
         return routesAndStops
     }
