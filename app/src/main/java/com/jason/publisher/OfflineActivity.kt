@@ -1,9 +1,8 @@
 package com.jason.publisher
 
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.Context
-import android.content.Intent
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.Rect
 import android.hardware.Sensor
@@ -15,11 +14,10 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.NumberPicker
 import android.widget.Spinner
 import android.widget.Toast
@@ -151,8 +149,9 @@ class OfflineActivity : AppCompatActivity() {
 
         binding.chatButton.setOnClickListener {
             // route to message list
-            val intent = Intent(this, ChatActivity::class.java)
-            startActivity(intent)
+//            val intent = Intent(this, ChatActivity::class.java)
+//            startActivity(intent)
+            showChatDialog()
         }
 
         // Set up spinner
@@ -171,6 +170,55 @@ class OfflineActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun showChatDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Send Message to Operator")
+        val input = EditText(this)
+        builder.setView(input)
+        builder.setPositiveButton("Send") { dI, _ ->
+            sendMessageToOperator(dI,input.text.toString())
+        }
+        builder.setNegativeButton("Cancel") { dialogInterface, _ -> dialogInterface.cancel() }
+        builder.show()
+    }
+
+    private fun sendMessageToOperator(dI: DialogInterface?, message: String) {
+        val contentMessage = mapOf("operatorMessage" to message)
+        val call = apiService.postAttributes(
+            ApiService.BASE_URL+mqttManager.getUsername()+"/attributes",
+            "application/json",
+            contentMessage
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(
+                        this@OfflineActivity,
+                        "Message has been sent",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    dI?.cancel()
+                } else {
+                    Toast.makeText(
+                        this@OfflineActivity,
+                        "There is something wrong, try again!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(
+                    this@OfflineActivity,
+                    "There is something wrong, try again!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
+    }
+
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun showPopUpDialog() {
         isFirstTime = true
@@ -675,7 +723,7 @@ class OfflineActivity : AppCompatActivity() {
         // sets the value of the textview
         // based on the length of the stored arraylist
         totalMessage = sharedPrefMananger.getMessageList(MSG_KEY).size
-        binding.notificationBadge.text = totalMessage.toString()
+//        binding.notificationBadge.text = totalMessage.toString()
     }
 
     private val sensorListener = object : SensorEventListener {
