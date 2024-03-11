@@ -61,6 +61,9 @@ import retrofit2.Response
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 
+/**
+ * OfflineActivity class responsible for managing the application in offline mode.
+ */
 class OfflineActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOfflineBinding
@@ -106,6 +109,10 @@ class OfflineActivity : AppCompatActivity() {
     private lateinit var arrBusData : List<BusItem>
     private var markerBus = HashMap<String, Marker>()
 
+    /**
+     * Initializes the activity, sets up sensor and service managers, loads configuration, subscribes to admin messages,
+     * and initializes UI components.
+     */
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,6 +178,9 @@ class OfflineActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows a dialog for sending a message to the operator.
+     */
     private fun showChatDialog() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Send Message to Operator")
@@ -183,6 +193,11 @@ class OfflineActivity : AppCompatActivity() {
         builder.show()
     }
 
+    /**
+     * Sends a message to the operator via API service.
+     * @param dI The dialog interface.
+     * @param message The message to send.
+     */
     private fun sendMessageToOperator(dI: DialogInterface?, message: String) {
         val contentMessage = mapOf("operatorMessage" to message)
         val call = apiService.postAttributes(
@@ -218,7 +233,9 @@ class OfflineActivity : AppCompatActivity() {
         })
     }
 
-
+    /**
+     * Shows a pop-up dialog for setting departure time.
+     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun showPopUpDialog() {
         isFirstTime = true
@@ -242,7 +259,7 @@ class OfflineActivity : AppCompatActivity() {
         hoursPicker.maxValue = 1
 
         minutesPicker.minValue = 0
-        minutesPicker.maxValue = 30
+        minutesPicker.maxValue = 59
 
         MaterialAlertDialogBuilder(this)
             .setView(dialogView)
@@ -265,6 +282,9 @@ class OfflineActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Requests admin messages periodically.
+     */
     private fun requestAdminMessage() {
         val jsonObject = JSONObject()
         jsonObject.put("sharedKeys", "message")
@@ -280,6 +300,9 @@ class OfflineActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Subscribes to admin messages and displays notifications for new messages.
+     */
     private fun subscribeAdminMessage() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
             runOnUiThread {
@@ -298,6 +321,10 @@ class OfflineActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Displays a notification for a new message from the admin.
+     * @param message The message content.
+     */
     private fun showNotification(message: String) {
         notificationManager.showNotification(
             channelId = "channel2",
@@ -316,7 +343,10 @@ class OfflineActivity : AppCompatActivity() {
         soundManager.playSound(SOUND_FILE_NAME)
     }
 
-    // save new message into sharedprefrence
+    /**
+     * Saves a new message into shared preferences and updates message count.
+     * @param message The message content.
+     */
     private fun saveNewMessage(message: String) {
         sharedPrefMananger.saveString(LAST_MSG_KEY, message)
 
@@ -343,6 +373,9 @@ class OfflineActivity : AppCompatActivity() {
         getMessageCount() // calculate total message
     }
 
+    /**
+     * Starts updating the bus location on the map.
+     */
     private fun startLocationUpdate() {
         var isForward =
             true // Flag to indicate the direction of movement, true for forward, false for backward
@@ -392,6 +425,9 @@ class OfflineActivity : AppCompatActivity() {
         handler.post(updateRunnable)
     }
 
+    /**
+     * Retrieves bus route data from a JSON file and initializes route data.
+     */
     private fun getBusRouteData() {
         try {
             val stream = assets.open("busRoute.json")
@@ -429,6 +465,9 @@ class OfflineActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Generates markers for bus stops on the map.
+     */
     private fun generateBusStop() {
         val overlayItems = ArrayList<OverlayItem>()
         busStop.forEachIndexed { index, geoPoint ->
@@ -460,6 +499,9 @@ class OfflineActivity : AppCompatActivity() {
         binding.map.overlays.add(overlayItem)
     }
 
+    /**
+     * Generates polylines for bus route segments on the map.
+     */
     private fun generatePolyline() {
         try {
             val routePolylineFrom = Polyline(binding.map)
@@ -499,6 +541,10 @@ class OfflineActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets up the map view by removing existing markers, invalidating the map, updating bus marker icon and position,
+     * and resetting the route index.
+     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun mapViewSetup() {
         binding.map.overlays.remove(busMarker)
@@ -509,6 +555,10 @@ class OfflineActivity : AppCompatActivity() {
         routeIndex = 0
     }
 
+    /**
+     * Updates the position of the bus marker on the map and publishes telemetry data.
+     * Uses a runnable to update the marker position periodically.
+     */
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun updateMarkerPosition() {
         val handler = Handler(Looper.getMainLooper())
@@ -530,31 +580,9 @@ class OfflineActivity : AppCompatActivity() {
         handler.post(updateRunnable)
     }
 
-//    private fun getAttributes(apiService: ApiService, accessToken: String, clientKeys: String) {
-//        val call = apiService.getAttributes(
-//            "${ApiService.BASE_URL}$accessToken/attributes",
-//            "application/json",
-//            clientKeys
-//        )
-//        call.enqueue(object : Callback<ClientAttributesResponse> {
-//            override fun onResponse(call: Call<ClientAttributesResponse>, response: Response<ClientAttributesResponse>) {
-//                if (response.isSuccessful) {
-//                    val clientAttributes = response.body()
-//                    binding.attribute21.text = clientAttributes?.client?.attribute1.toString()
-//                    binding.attribute22.text = clientAttributes?.client?.attribute2.toString()
-//                    binding.attribute23.text = clientAttributes?.client?.attribute3.toString()
-//                } else {
-//                    Log.d("Request failed","${response.errorBody()?.string()}")
-//                    Toast.makeText(this@OfflineActivity, "Request failed: ${response.errorBody()?.string()}", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//
-//            override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
-//                Toast.makeText(this@MainActivity, "Request failed: ${t.message}", Toast.LENGTH_SHORT).show()
-//            }
-//        })
-//    }
-
+    /**
+     * Starts a countdown timer for the departure time.
+     */
     private fun startCountdown() {
         val totalMinutes = hoursDeparture * 60 + minutesDeparture
         val totalMillis = totalMinutes * 60 * 1000 // Convert total minutes to milliseconds
@@ -576,6 +604,9 @@ class OfflineActivity : AppCompatActivity() {
         timer.start()
     }
 
+    /**
+     * Publishes telemetry data including latitude, longitude, bearing, speed, direction, and other relevant information.
+     */
     @SuppressLint("LongLogTag")
     private fun publishTelemetryData() {
         val jsonObject = JSONObject()
@@ -601,6 +632,9 @@ class OfflineActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Publishes the current status of whether to show the departure time.
+     */
     private fun publishShowDepartureTime(){
         val jsonObject = JSONObject()
         jsonObject.put("showDepartureTime", showDepartureTime)
@@ -609,6 +643,9 @@ class OfflineActivity : AppCompatActivity() {
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
+    /**
+     * Publishes the current departure time.
+     */
     private fun publishDepartureTime(){
         val jsonObject = JSONObject()
         jsonObject.put("departureTime", departureTime)
@@ -617,6 +654,9 @@ class OfflineActivity : AppCompatActivity() {
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
+    /**
+     * Posts attributes data to the API service.
+     */
     private fun postAttributes(apiService: ApiService, accessToken: String, attributesData: AttributesData) {
         val call = apiService.postAttributes(
             "${ApiService.BASE_URL}$accessToken/attributes",
@@ -641,6 +681,9 @@ class OfflineActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Retrieves default configuration values for the activity, such as latitude, longitude, bearing, and more.
+     */
     // because this is offline mode,
     // the default value required is only the new message comparator
     private fun getDefaultConfigValue() {
@@ -665,6 +708,9 @@ class OfflineActivity : AppCompatActivity() {
 
     }
 
+    /**
+     * Sends data attributes to the server.
+     */
     private fun sendDataAttributes(){
         val handler = Handler(Looper.getMainLooper())
         handler.postDelayed(object : Runnable {
@@ -677,6 +723,9 @@ class OfflineActivity : AppCompatActivity() {
         }, 0)
     }
 
+    /**
+     * Retrieves attributes data for each bus from the server.
+     */
     private fun getAttributes(apiService: ApiService, token: String, clientKeys: String) {
         Log.d("getAttribute: ", "test1")
         Log.d("token: ", token)
@@ -715,7 +764,9 @@ class OfflineActivity : AppCompatActivity() {
         })
     }
 
-
+    /**
+     * Retrieves the total message count from shared preferences.
+     */
     private fun getMessageCount() {
         // sets the value of the textview
         // based on the length of the stored arraylist
@@ -723,6 +774,10 @@ class OfflineActivity : AppCompatActivity() {
 //        binding.notificationBadge.text = totalMessage.toString()
     }
 
+    /**
+     * Listener for sensor changes, specifically for accelerometer and compass sensors.
+     * Updates the bearing and direction based on sensor readings.
+     */
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
             val alpha = 0.97f
@@ -755,7 +810,9 @@ class OfflineActivity : AppCompatActivity() {
 
     }
 
-
+    /**
+     * Resumes sensor listeners when the activity is resumed.
+     */
     override fun onResume() {
         super.onResume()
         // unregister to avoid the sensor continuing to run
@@ -773,17 +830,27 @@ class OfflineActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Pauses sensor listeners when the activity is paused.
+     */
     override fun onPause() {
         super.onPause()
         sensorManager.unregisterListener(sensorListener)
     }
 
+    /**
+     * Stops sound, disconnects MQTT manager, and cleans up resources when the activity is destroyed.
+     */
     override fun onDestroy() {
         soundManager.stopSound()
         mqttManager.disconnect()
         super.onDestroy()
     }
 
+    /**
+     * Companion object holding constant values used throughout the activity.
+     * Includes server URI, client ID, MQTT topics, and other constants.
+     */
     companion object {
         const val SERVER_URI = "tcp://43.226.218.94:1883"
         const val CLIENT_ID = "jasonAndroidClientId"

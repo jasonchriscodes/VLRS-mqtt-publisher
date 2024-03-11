@@ -9,7 +9,17 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 import retrofit2.http.Url
 
+/**
+ * Interface defining API endpoints for attribute-related operations.
+ */
 interface ApiService {
+    /**
+     * Sends attributes data to the specified URL.
+     * @param url The URL to send the attributes data.
+     * @param contentType The content type of the request.
+     * @param requestBody The body of the request.
+     * @return A [Call] object representing the asynchronous request.
+     */
     @POST
     fun postAttributes(
         @Url url: String,
@@ -17,6 +27,13 @@ interface ApiService {
         @Body requestBody: Any
     ): Call<Void>
 
+    /**
+     * Retrieves attributes data from the specified URL.
+     * @param url The URL to retrieve the attributes data.
+     * @param contentType The content type of the request.
+     * @param clientKeys The client keys.
+     * @return A [Call] object representing the asynchronous request.
+     */
     @GET
     fun getAttributes(
         @Url url: String,
@@ -29,6 +46,10 @@ interface ApiService {
     }
 }
 
+/**
+ * Data class representing the response containing client attributes.
+ * @property client The client attributes data.
+ */
 data class ClientAttributesResponse(
     val client: AttributesData
 )
