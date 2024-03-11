@@ -95,7 +95,7 @@ class OfflineActivity : AppCompatActivity() {
     private var hoursDeparture = 0
     private var minutesDeparture = 0
     private var showDepartureTime = "Yes"
-    private var departureTime = "00:00"
+    private var departureTime = "00:00:00"
     private var isFirstTime = false
 
     private lateinit var timer: CountDownTimer
@@ -571,13 +571,10 @@ class OfflineActivity : AppCompatActivity() {
 
             override fun onFinish() {
                 // This method will be called when the timer finishes
-                departureTime = "Timer finished"
-                Log.d("departureTime", "Timer finished")
             }
         }
         timer.start()
     }
-
 
     @SuppressLint("LongLogTag")
     private fun publishTelemetryData() {
