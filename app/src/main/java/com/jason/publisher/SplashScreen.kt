@@ -153,6 +153,7 @@ class SplashScreen : AppCompatActivity() {
             routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
             routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
             routesAndStops["sharedBus"] = busses
+            routesAndStops["bearing"] = busData.shared.bearing!!
         } else {
             routesAndStops["routes"] = busData.shared!!.busRoute!!
             routesAndStops["stops"] = busData.shared.busStop!!
@@ -193,7 +194,7 @@ class SplashScreen : AppCompatActivity() {
      */
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config")
+        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }

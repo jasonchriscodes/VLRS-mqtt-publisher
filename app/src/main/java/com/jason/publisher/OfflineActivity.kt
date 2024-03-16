@@ -34,6 +34,7 @@ import com.jason.publisher.Helper.createBusStopSymbol
 import com.jason.publisher.databinding.ActivityOfflineBinding
 import com.jason.publisher.model.AttributesData
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusBearing
 import com.jason.publisher.model.BusItem
 import com.jason.publisher.model.Coordinate
 import com.jason.publisher.model.JsonMember1Item
@@ -84,7 +85,8 @@ class OfflineActivity : AppCompatActivity() {
 
     private var routeIndex = 0 // Initialize index at the start
     private var busRoute = ArrayList<GeoPoint>()
-            private var busStop = ArrayList<GeoPoint>()
+    private var busStop = ArrayList<GeoPoint>()
+    private var busBearing = ArrayList<BusBearing>()
 
     private var lastMessage = ""
     private var totalMessage = 0
@@ -569,7 +571,7 @@ class OfflineActivity : AppCompatActivity() {
                 postAttributes(apiService, mqttManager.getUsername(), attributesData)
                 Log.d("Mqttmanager", mqttManager.getUsername())
                 busMarker.position = GeoPoint(latitude, longitude)
-                busMarker.rotation = bearing
+                busMarker.rotation =  busBearing[routeIndex].bearing!!.toFloat()
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
                 publishTelemetryData()
@@ -706,6 +708,8 @@ class OfflineActivity : AppCompatActivity() {
             markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
 
+        busBearing = busData["bearing"] as ArrayList<BusBearing>
+        Log.d("Bearing Length", busBearing.size.toString())
     }
 
     /**
