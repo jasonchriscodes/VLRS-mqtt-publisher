@@ -576,11 +576,17 @@ class OfflineActivity : AppCompatActivity() {
                 binding.map.invalidate()
                 publishTelemetryData()
                 Log.d("updateMarker", "")
-                handler.postDelayed(this, PUBLISH_POSITION_TIME)
+                if (routeIndex == busBearing.lastIndex) {
+                    // Remove the callback if it's the last index
+                    handler.removeCallbacksAndMessages(null)
+                } else {
+                    handler.postDelayed(this, PUBLISH_POSITION_TIME)
+                }
             }
         }
         handler.post(updateRunnable)
     }
+
 
     /**
      * Starts a countdown timer for the departure time.
