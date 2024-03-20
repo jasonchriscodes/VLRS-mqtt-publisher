@@ -38,8 +38,17 @@ data class Shared(
     val message: String? = null,
 
     @field:SerializedName("config")
-    val config: BusConfig? = null
+    val config: BusConfig? = null,
+
+    @field:SerializedName("bearing")
+    val bearing: List<BusBearing>? = null
 )
+
+@Parcelize
+data class BusBearing(
+    @field:SerializedName("bearing")
+    val bearing: Double? = null
+): Parcelable
 
 @Parcelize
 data class BusConfig(

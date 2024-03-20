@@ -26,6 +26,10 @@ import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.SharedPrefMananger
 import org.json.JSONObject
 
+/**
+ * SplashScreen activity responsible for initializing the application and handling initial setup.
+ * It retrieves necessary data, such as device ID and configuration, then routes to the appropriate screen.
+ */
 @SuppressLint("CustomSplashScreen")
 class SplashScreen : AppCompatActivity() {
     private lateinit var mqttManager: MqttManager
@@ -46,6 +50,9 @@ class SplashScreen : AppCompatActivity() {
     private var speed = 0.0F
     private var direction = ""
 
+    /**
+     * Overrides the onCreate method to initialize the activity and perform necessary setup.
+     */
     @SuppressLint("HardwareIds")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,12 +92,18 @@ class SplashScreen : AppCompatActivity() {
         requestData()
     }
 
+    /**
+     * Routes to the next screen after a specified delay.
+     */
     private fun routeToNextScreen() {
         Handler(Looper.getMainLooper()).postDelayed({
             showOptionDialog()
         }, 5000)
     }
 
+    /**
+     * Shows the mode selection dialog and handles the selected mode.
+     */
     private fun showOptionDialog() {
         modeSelectionDialog.showModeSelectionDialog(object : ModeSelectionDialog.ModeSelectionListener {
             override fun onModeSelected(mode: String) {
@@ -121,6 +134,9 @@ class SplashScreen : AppCompatActivity() {
         })
     }
 
+    /**
+     * Retrieves routes and stops based on the selected mode.
+     */
     private fun getRoutesAndStops(isOffline: Boolean): HashMap<String, Any> {
         val routesAndStops = HashMap<String, Any>()
         val gson = Gson()
@@ -137,6 +153,7 @@ class SplashScreen : AppCompatActivity() {
             routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
             routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
             routesAndStops["sharedBus"] = busses
+            routesAndStops["bearing"] = busData.shared.bearing!!
         } else {
             routesAndStops["routes"] = busData.shared!!.busRoute!!
             routesAndStops["stops"] = busData.shared.busStop!!
@@ -145,6 +162,9 @@ class SplashScreen : AppCompatActivity() {
         return routesAndStops
     }
 
+    /**
+     * Starts location updates if the necessary permissions are granted.
+     */
     private fun startLocationUpdate() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -169,9 +189,12 @@ class SplashScreen : AppCompatActivity() {
         }
     }
 
+    /**
+     * Publishes a request for necessary attributes.
+     */
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config")
+        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }
