@@ -110,6 +110,7 @@ class OfflineActivity : AppCompatActivity() {
     private var sharedBus = ArrayList<String> ()
     private lateinit var arrBusData : List<BusItem>
     private var markerBus = HashMap<String, Marker>()
+    private var routeDirection = "forward"
 
     /**
      * Initializes the activity, sets up sensor and service managers, loads configuration, subscribes to admin messages,
@@ -274,6 +275,7 @@ class OfflineActivity : AppCompatActivity() {
                 startLocationUpdate()
                 publishShowDepartureTime() // Added to publish the show departure time
                 publishDepartureTime()
+                publishRouteDirection()
                 sendDataAttributes()
                 // Start the countdown timer
                 startCountdown()
@@ -411,17 +413,24 @@ class OfflineActivity : AppCompatActivity() {
                 }
 
                 // Determine the direction of index movement
-                if (isForward) { // If moving forward
+//                if (isForward) { // If moving forward
                     routeIndex++
                     if (routeIndex == busRoute.size - 1) {
                         isForward = false // Change direction to backward if reached upper limit
                     }
-                } else { // If moving backward
-                    routeIndex--
-                    if (routeIndex == 0) {
-                        isForward = true // Change direction to forward if reached lower limit
-                    }
+                    Log.d("routeDirectionIF", routeIndex.toString())
+                if (routeIndex > 122){
+                    routeDirection = "backward"
                 }
+//                    123
+//                } else { // If moving backward
+//                    routeIndex--
+//                    if (routeIndex == 0) {
+//                        isForward = true // Change direction to forward if reached lower limit
+//                    }
+//                    Log.d("routeDirectionIB", routeIndex.toString())
+//                    routeDirection = "backward"
+//                }
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }}
         handler.post(updateRunnable)
@@ -626,8 +635,10 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("bus", busConfig)
         jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
+        jsonObject.put("routeDirection", routeDirection)
         Log.d("departureTimeTelemetry:", departureTime)
         Log.d("departureTimeShowTelemetry:", showDepartureTime)
+        Log.d("routeDirectionTelemetry", routeDirection)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
@@ -638,6 +649,17 @@ class OfflineActivity : AppCompatActivity() {
             message = "Lat: $latitude, Long: $longitude, Direction: $direction",
             false
         )
+    }
+
+    /**
+     * Publishes the current status of routeDirection.
+     */
+    private fun publishRouteDirection(){
+        val jsonObject = JSONObject()
+        jsonObject.put("routeDirection", routeDirection)
+        Log.d("routeDirection", routeDirection)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
     /**
