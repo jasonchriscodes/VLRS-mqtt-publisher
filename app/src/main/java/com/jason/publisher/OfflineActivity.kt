@@ -581,13 +581,17 @@ class OfflineActivity : AppCompatActivity() {
                 Log.d("Mqttmanager", mqttManager.getUsername())
                 busMarker.position = GeoPoint(latitude, longitude)
                 busMarker.rotation =  busBearing[routeIndex].bearing!!.toFloat()
+                bearing = busBearing[routeIndex].bearing!!.toFloat()
+                Log.d("bearingUpdateMarker", bearing.toString())
+                direction = Helper.bearingToDirection(bearing)
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
                 publishTelemetryData()
                 Log.d("updateMarker", "")
                 if (routeIndex == busBearing.lastIndex) {
+                    routeIndex = 0
                     // Remove the callback if it's the last index
-                    handler.removeCallbacksAndMessages(null)
+//                    handler.removeCallbacksAndMessages(null)
                 } else {
                     handler.postDelayed(this, PUBLISH_POSITION_TIME)
                 }
@@ -636,6 +640,7 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
         jsonObject.put("routeDirection", routeDirection)
+        Log.d("bearingTelemetry", bearing.toString())
         Log.d("departureTimeTelemetry:", departureTime)
         Log.d("departureTimeShowTelemetry:", showDepartureTime)
         Log.d("routeDirectionTelemetry", routeDirection)
@@ -830,9 +835,9 @@ class OfflineActivity : AppCompatActivity() {
             if (success) {
                 val orientation = FloatArray(3)
                 SensorManager.getOrientation(r, orientation)
-                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-                bearing = (bearing + 360) % 360
-                direction = Helper.bearingToDirection(bearing)
+//                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+//                bearing = (bearing + 360) % 360
+//                direction = Helper.bearingToDirection(bearing)
             }
         }
 
