@@ -61,6 +61,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import kotlin.random.Random
 
 /**
  * OfflineActivity class responsible for managing the application in offline mode.
@@ -403,13 +404,14 @@ class OfflineActivity : AppCompatActivity() {
 
                 // Calculate speed if index is not at the beginning
                 if (routeIndex != 0) {
-                    speed = Helper.calculateSpeed(
-                        latitude,
-                        longitude,
-                        busRoute[routeIndex - 1].latitude,
-                        busRoute[routeIndex - 1].longitude,
-                        PUBLISH_POSITION_TIME
-                    )
+                    speed = Random.nextFloat() * 10f + 50f
+//                    speed = Helper.calculateSpeed(
+//                        latitude,
+//                        longitude,
+//                        busRoute[routeIndex - 1].latitude,
+//                        busRoute[routeIndex - 1].longitude,
+//                        PUBLISH_POSITION_TIME
+//                    )
                 }
 
                 // Determine the direction of index movement
