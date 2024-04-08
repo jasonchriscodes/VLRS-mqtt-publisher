@@ -4,11 +4,11 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class Bus(
-
     @field:SerializedName("shared")
     val shared: Shared? = null
-)
+): Parcelable
 
 @Parcelize
 data class JsonMember1Item(
@@ -20,6 +20,7 @@ data class JsonMember1Item(
     val longitude: Double? = null
 ) : Parcelable
 
+@Parcelize
 data class Shared(
 
     @field:SerializedName("busStop")
@@ -41,13 +42,22 @@ data class Shared(
     val config: BusConfig? = null,
 
     @field:SerializedName("bearing")
-    val bearing: List<BusBearing>? = null
-)
+    val bearing: List<BusBearing>? = null,
+
+    @field:SerializedName("bearingCustomer")
+    val bearingCustomer: List<BusBearingCustomer>? = null
+) : Parcelable
 
 @Parcelize
 data class BusBearing(
     @field:SerializedName("bearing")
     val bearing: Double? = null
+): Parcelable
+
+@Parcelize
+data class BusBearingCustomer(
+    @field:SerializedName("bearing")
+    val bearingCustomer: Double? = null
 ): Parcelable
 
 @Parcelize
