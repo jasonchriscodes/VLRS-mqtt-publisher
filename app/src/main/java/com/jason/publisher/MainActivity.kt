@@ -1,23 +1,39 @@
 package com.jason.publisher
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.NumberPicker
+import android.widget.Spinner
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Bus
 import com.jason.publisher.model.BusConfig
+import com.jason.publisher.model.BusData
 import com.jason.publisher.model.BusRoute
 import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
+import com.jason.publisher.services.ApiService
+import com.jason.publisher.services.ApiServiceBuilder
+import com.jason.publisher.services.ClientAttributesResponse
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.NotificationManager
@@ -33,6 +49,9 @@ import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,7 +75,19 @@ class MainActivity : AppCompatActivity() {
 
     private var busName = ""
     private var token = ""
+    private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
+    private var markerBus = HashMap<String, Marker>()
+    private val arrBusData = Dummmy.getConfig()
+    private var clientKeys = "latitude,longitude,bearing,speed,direction"
 
+    private var hoursDeparture = 0
+    private var minutesDeparture = 0
+    private var showDepartureTime = "Yes"
+    private var departureTime = "00:00:00"
+    private var isFirstTime = false
+    private lateinit var timer: CountDownTimer
+
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -70,7 +101,7 @@ class MainActivity : AppCompatActivity() {
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
 
-        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+//        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
 
         getDefaultConfigValue()
         mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
@@ -79,13 +110,73 @@ class MainActivity : AppCompatActivity() {
         mapViewSetup()
         subscribeAdminMessage()
         requestAdminMessage()
+        sendDataAttributes()
 
         binding.chatButton.setOnClickListener {
-            val intent = Intent(this, ChatActivity::class.java)
-            startActivity(intent)
+//            val intent = Intent(this, ChatActivity::class.java)
+//            startActivity(intent)
+            showChatDialog()
+        }
+        // Set up spinner
+        val items = arrayOf("Yes", "No")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // Set click listener for pop-up button
+        binding.popUpButton.setOnClickListener {
+                showPopUpDialog()
         }
     }
 
+    /**
+     * Shows a pop-up dialog for setting departure time.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun showPopUpDialog() {
+        isFirstTime = true
+        val dialogView = layoutInflater.inflate(R.layout.popup_dialog, null)
+        val spinner = dialogView.findViewById<Spinner>(R.id.spinnerShowTime)
+        val hoursPicker = dialogView.findViewById<NumberPicker>(R.id.hoursPicker)
+        val minutesPicker = dialogView.findViewById<NumberPicker>(R.id.minutesPicker)
+
+        // Options for the Spinner
+        val items = arrayOf("Yes", "No")
+
+        // ArrayAdapter for the Spinner
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // Set ArrayAdapter to the Spinner
+        spinner.adapter = adapter
+
+        // Initialize the NumberPickers
+        hoursPicker.minValue = 0
+        hoursPicker.maxValue = 1
+
+        minutesPicker.minValue = 0
+        minutesPicker.maxValue = 59
+
+        MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setPositiveButton("OK") { dialog, which ->
+                hoursDeparture = hoursPicker.value
+                minutesDeparture = minutesPicker.value
+                showDepartureTime = spinner.selectedItem.toString()
+                Log.d("departureTimeDialog", showDepartureTime)
+                publishShowDepartureTime() // Added to publish the show departure time
+                publishDepartureTime()
+                // Start the countdown timer
+                startCountdown()
+            }
+            .setNegativeButton("Cancel") { dialog, which ->
+                // Handle Cancel button click
+            }
+            .show()
+    }
+
+    /**
+     * Requests admin messages periodically.
+     */
     private fun requestAdminMessage() {
         val jsonObject = JSONObject()
         jsonObject.put("sharedKeys","message")
@@ -142,6 +233,61 @@ class MainActivity : AppCompatActivity() {
         getMessageCount()
     }
 
+    /**
+     * Shows a dialog for sending a message to the operator.
+     */
+    private fun showChatDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Send Message to Operator")
+        val input = EditText(this)
+        builder.setView(input)
+        builder.setPositiveButton("Send") { dI, _ ->
+            sendMessageToOperator(dI,input.text.toString())
+        }
+        builder.setNegativeButton("Cancel") { dialogInterface, _ -> dialogInterface.cancel() }
+        builder.show()
+    }
+
+    /**
+     * Sends a message to the operator via API service.
+     * @param dI The dialog interface.
+     * @param message The message to send.
+     */
+    private fun sendMessageToOperator(dI: DialogInterface?, message: String) {
+        val contentMessage = mapOf("operatorMessage" to message)
+        val call = apiService.postAttributes(
+            ApiService.BASE_URL+mqttManager.getUsername()+"/attributes",
+            "application/json",
+            contentMessage
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Message has been sent",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    dI?.cancel()
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "There is something wrong, try again!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "There is something wrong, try again!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
+    }
+
     private fun startLocationUpdate() {
         locationManager.startLocationUpdates(object: LocationListener {
             override fun onLocationUpdate(location: Location) {
@@ -158,7 +304,7 @@ class MainActivity : AppCompatActivity() {
         val center = GeoPoint(latitude, longitude)
 
         val marker = Marker(binding.map)
-        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus2, null)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         mapController = binding.map.controller as MapController
@@ -178,17 +324,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun generatePolyline() {
-        val busRoute = ArrayList<GeoPoint>()
-        val busStop = ArrayList<GeoPoint>()
-        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
-        val routes = busData["routes"] as BusRoute
-        routes.jsonMember1!!.forEach {
-            busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
-        }
-        val stops = busData["stops"] as BusStop
-        stops.jsonMember1!!.forEach {
-            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
-        }
+        val busRoute = Dummmy.getRoutesOnline()
+        val busStop = Dummmy.getBusStopOnline()
+//        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
+//        val routes = busData["routes"] as BusRoute
+//        routes.jsonMember1!!.forEach {
+//            busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+//        }
+//        val stops = busData["stops"] as BusStop
+//        stops.jsonMember1!!.forEach {
+//            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
+//        }
 
         val overlayItems = ArrayList<OverlayItem>()
         busStop.forEachIndexed { index, geoPoint ->
@@ -235,14 +381,38 @@ class MainActivity : AppCompatActivity() {
                 marker.rotation = bearing
                 binding.map.overlays.add(marker)
                 binding.map.invalidate()
-                publishPosition()
+                publishTelemetryData()
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
         handler.post(updateRunnable)
     }
 
-    private fun publishPosition() {
+    /**
+     * Starts a countdown timer for the departure time.
+     */
+    private fun startCountdown() {
+        val totalMinutes = hoursDeparture * 60 + minutesDeparture
+        val totalMillis = totalMinutes * 60 * 1000 // Convert total minutes to milliseconds
+
+        timer = object : CountDownTimer(totalMillis.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                // This method will be called every second
+                val hours = millisUntilFinished / (1000 * 60 * 60)
+                val minutes = (millisUntilFinished / (1000 * 60)) % 60
+                val seconds = (millisUntilFinished / 1000) % 60
+                departureTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                Log.d("departureTime", departureTime)
+            }
+
+            override fun onFinish() {
+                // This method will be called when the timer finishes
+            }
+        }
+        timer.start()
+    }
+
+    private fun publishTelemetryData() {
         val jsonObject = JSONObject()
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
@@ -250,6 +420,8 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("direction", direction)
         jsonObject.put("speed", speed)
         jsonObject.put("bus", busConfig)
+        jsonObject.put("showDepartureTime", showDepartureTime)
+        jsonObject.put("departureTime", departureTime)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
@@ -262,6 +434,28 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Publishes the current status of whether to show the departure time.
+     */
+    private fun publishShowDepartureTime(){
+        val jsonObject = JSONObject()
+        jsonObject.put("showDepartureTime", showDepartureTime)
+        Log.d("ShowDepartureTime", showDepartureTime)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
+    }
+
+    /**
+     * Publishes the current departure time.
+     */
+    private fun publishDepartureTime(){
+        val jsonObject = JSONObject()
+        jsonObject.put("departureTime", departureTime)
+        Log.d("ShowDepartureTime", showDepartureTime)
+        val jsonString = jsonObject.toString()
+        mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
+    }
+
     private fun getDefaultConfigValue() {
         latitude = intent.getDoubleExtra("lat", 0.0)
         longitude = intent.getDoubleExtra("lng", 0.0)
@@ -270,9 +464,73 @@ class MainActivity : AppCompatActivity() {
         direction = intent.getStringExtra("dir").toString()
         lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
 
-        val aid = intent.getStringExtra(Constant.aidKey)
+        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
         token = intent.getStringExtra(Constant.tokenKey).toString()
+
+        arrBusData.filter { it.aid != aid }
+        for (bus in arrBusData) {
+            markerBus[bus.token] = Marker(binding.map)
+            markerBus[bus.token]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+            markerBus[bus.token]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        }
+    }
+
+    /**
+     * Retrieves attributes data for each bus from the server.
+     */
+    private fun getAttributes(apiService: ApiService, token: String, clientKeys: String) {
+        Log.d("getAttribute: ", "test1")
+        Log.d("token: ", token)
+        val call = apiService.getAttributes(
+            "${ApiService.BASE_URL}$token/attributes",
+            "application/json",
+            clientKeys
+        )
+        call.enqueue(object : Callback<ClientAttributesResponse> {
+            override fun onResponse(call: Call<ClientAttributesResponse>, response: Response<ClientAttributesResponse>) {
+                Log.d("Attribute Data", response.body().toString())
+                if (response.isSuccessful) {
+                    if (response.body()?.client != null){
+                        val lat = response.body()?.client?.latitude ?: 0.0
+                        val lon = response.body()!!.client.longitude ?: 0.0
+                        val ber = response.body()!!.client.bearing ?: 0.0F
+                        val berCus = response.body()!!.client.bearingCustomer ?: 0.0F
+                        Log.d( "Check Array", arrBusData.size.toString())
+                        for (bus in arrBusData) {
+                            if (token == bus.token) {
+                                markerBus[token]!!.position = GeoPoint(lat, lon)
+                                markerBus[token]!!.rotation = ber
+                                binding.map.overlays.add(markerBus[token])
+                                binding.map.invalidate()
+                            }
+                        }
+                    }
+
+                } else {
+                    Log.d("request data bus", response.message().toString())
+                }
+            }
+
+            override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
+                TODO("Not yet implemented")
+            }
+        })
+    }
+
+    /**
+     * Sends data attributes to the server.
+     */
+    private fun sendDataAttributes(){
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                for (bus in arrBusData) {
+                    getAttributes(apiService, bus.token, clientKeys)
+                }
+                handler.postDelayed(this, 3000)
+            }
+        }, 0)
     }
 
     private fun getMessageCount() {

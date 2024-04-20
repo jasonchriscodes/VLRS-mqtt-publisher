@@ -19,6 +19,7 @@ import com.google.firebase.ktx.Firebase
 import com.google.gson.Gson
 import com.jason.publisher.databinding.ActivitySplashScreenBinding
 import com.jason.publisher.model.Bus
+import com.jason.publisher.model.BusData
 import com.jason.publisher.model.BusItem
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.ModeSelectionDialog
@@ -108,7 +109,7 @@ class SplashScreen : AppCompatActivity() {
         modeSelectionDialog.showModeSelectionDialog(object : ModeSelectionDialog.ModeSelectionListener {
             override fun onModeSelected(mode: String) {
                 var intent = Intent(this@SplashScreen, MainActivity::class.java)
-                val busData: HashMap<String, Any>
+                val busData: BusData
                 if (mode == "Offline") {
                     intent = Intent(this@SplashScreen, OfflineActivity::class.java)
                     busData = getRoutesAndStops(true)
@@ -137,9 +138,10 @@ class SplashScreen : AppCompatActivity() {
     /**
      * Retrieves routes and stops based on the selected mode.
      */
-    private fun getRoutesAndStops(isOffline: Boolean): HashMap<String, Any> {
+    private fun getRoutesAndStops(isOffline: Boolean): BusData {
         val routesAndStops = HashMap<String, Any>()
         val gson = Gson()
+        var busDto: BusData
         val busData = gson.fromJson(data, Bus::class.java)
         val busses = busData.shared!!.config!!.busConfig
         for (bus in busses) {
@@ -154,12 +156,27 @@ class SplashScreen : AppCompatActivity() {
             routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
             routesAndStops["sharedBus"] = busses
             routesAndStops["bearing"] = busData.shared.bearing!!
+            Log.d("Check bearing",busData.shared.bearingCustomer.toString())
+            busDto = BusData(
+                busData.shared!!.busRoute1!!,
+                busData.shared.busStop1!!,
+                busses,
+                busData.shared.bearing,
+                busData.shared.bearingCustomer
+            )
         } else {
             routesAndStops["routes"] = busData.shared!!.busRoute!!
             routesAndStops["stops"] = busData.shared.busStop!!
             routesAndStops["sharedBus"] = busses
+            busDto = BusData(
+                busData.shared!!.busRoute1!!,
+                busData.shared.busStop1!!,
+                busses,
+                null,
+                null
+            )
         }
-        return routesAndStops
+        return busDto
     }
 
     /**
@@ -194,7 +211,7 @@ class SplashScreen : AppCompatActivity() {
      */
     private fun requestData() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing")
+        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing,bearingCustomer")
         val jsonString = jsonObject.toString()
         mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }
