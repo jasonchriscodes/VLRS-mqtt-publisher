@@ -831,6 +831,7 @@ class OfflineActivity : AppCompatActivity() {
                         val lon = response.body()!!.client.longitude ?: 0.0
                         val ber = response.body()!!.client.bearing ?: 0.0F
                         val berCus = response.body()!!.client.bearingCustomer ?: 0.0F
+                        Log.d( "Check Array", arrBusData.size.toString())
                         for (bus in arrBusData) {
                             if (token == bus.accessToken) {
                                 markerBus[token]!!.position = GeoPoint(lat, lon)

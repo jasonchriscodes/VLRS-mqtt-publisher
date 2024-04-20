@@ -1,5 +1,6 @@
 package com.jason.publisher
 
+import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 
 object Dummmy {
@@ -359,4 +360,65 @@ object Dummmy {
         GeoPoint(-36.780390000000004, 174.99272000000002),
         GeoPoint(-36.780120000000004, 174.99216)
     )
+
+    fun getRoutesOnline() : List<GeoPoint> {
+        val geoPoint = mutableListOf<GeoPoint>()
+        val jsonString = """
+            {"1":[{"latitude":-36.853974,"longitude":174.767387},{"latitude":-36.853979,"longitude":174.767386},{"latitude":-36.854016,"longitude":174.767695},{"latitude":-36.85402,"longitude":174.767731},{"latitude":-36.85402,"longitude":174.767731},{"latitude":-36.854029,"longitude":174.767811},{"latitude":-36.854048,"longitude":174.768003},{"latitude":-36.854069,"longitude":174.768125},{"latitude":-36.854093,"longitude":174.768102},{"latitude":-36.854093,"longitude":174.768102},{"latitude":-36.854164,"longitude":174.768037},{"latitude":-36.854266,"longitude":174.768003},{"latitude":-36.854314,"longitude":174.767958},{"latitude":-36.854314,"longitude":174.767958},{"latitude":-36.854376,"longitude":174.7679},{"latitude":-36.854684,"longitude":174.767631},{"latitude":-36.854751,"longitude":174.767562},{"latitude":-36.854751,"longitude":174.767562},{"latitude":-36.85482,"longitude":174.767492},{"latitude":-36.854767,"longitude":174.767378},{"latitude":-36.854765,"longitude":174.767365},{"latitude":-36.854765,"longitude":174.767365},{"latitude":-36.854711,"longitude":174.766964},{"latitude":-36.854711,"longitude":174.766964},{"latitude":-36.854631,"longitude":174.766367},{"latitude":-36.854632,"longitude":174.766358},{"latitude":-36.854632,"longitude":174.766358},{"latitude":-36.854637,"longitude":174.766315},{"latitude":-36.854844,"longitude":174.765769},{"latitude":-36.854844,"longitude":174.765769},{"latitude":-36.854897,"longitude":174.765629},{"latitude":-36.85481,"longitude":174.765579},{"latitude":-36.85481,"longitude":174.765579},{"latitude":-36.854712,"longitude":174.765522},{"latitude":-36.854653,"longitude":174.765488},{"latitude":-36.854496,"longitude":174.765397},{"latitude":-36.854483,"longitude":174.76539},{"latitude":-36.854483,"longitude":174.76539},{"latitude":-36.85447,"longitude":174.765382},{"latitude":-36.85422,"longitude":174.765238},{"latitude":-36.854086,"longitude":174.76516},{"latitude":-36.854086,"longitude":174.76516},{"latitude":-36.854041,"longitude":174.765134},{"latitude":-36.853973,"longitude":174.765317},{"latitude":-36.853973,"longitude":174.765317},{"latitude":-36.853817,"longitude":174.765736},{"latitude":-36.853817,"longitude":174.765736},{"latitude":-36.853799,"longitude":174.765784},{"latitude":-36.853815,"longitude":174.765928},{"latitude":-36.853815,"longitude":174.765928},{"latitude":-36.853856,"longitude":174.766321},{"latitude":-36.853856,"longitude":174.766321},{"latitude":-36.853863,"longitude":174.766381},{"latitude":-36.853894,"longitude":174.76667},{"latitude":-36.853925,"longitude":174.766926},{"latitude":-36.853925,"longitude":174.766926},{"latitude":-36.853979,"longitude":174.767386},{"latitude":-36.853973,"longitude":174.767387}]}
+        """.trimIndent()
+        val jsonObject = JSONObject(jsonString)
+        val jsonArray = jsonObject.getJSONArray("1")
+
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.getJSONObject(i)
+            val latitude = item.getDouble("latitude")
+            val longitude = item.getDouble("longitude")
+            geoPoint.add(GeoPoint(latitude, longitude))
+        }
+        return geoPoint
+    }
+
+    fun getBusStopOnline() : List<GeoPoint> {
+        val jsonString = """
+            {"1":[{"latitude":-36.85397535118678,"longitude":174.76709223611678},{"latitude":-36.85426948446462,"longitude":174.76789229923398},{"latitude":-36.85469367666025,"longitude":174.76728480938263},{"latitude":-36.854724228079824,"longitude":174.76597568843115},{"latitude":-36.85469367666025,"longitude":174.76728480938263},{"latitude":-36.854132061662746,"longitude":174.765265325672}]}
+        """.trimIndent()
+        val geoPoint = mutableListOf<GeoPoint>()
+
+        val jsonObject = JSONObject(jsonString)
+        val jsonArray = jsonObject.getJSONArray("1")
+
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.getJSONObject(i)
+            val latitude = item.getDouble("latitude")
+            val longitude = item.getDouble("longitude")
+            geoPoint.add(GeoPoint(latitude, longitude))
+        }
+        return geoPoint
+    }
+
+    fun getConfig() : List<ConfigurationBus> {
+        val jsonString = """
+            {"busConfig":[{"aid":"8d34bdc9a5c78c42","bus":"Bus A","accessToken":"z0MQXzmMsNZwiD9Pwn6J"},{"aid":"2b039058a1a5f8a3","bus":"Bus B","accessToken":"YiSbp8zzJyt3htZ7ECI0"},{"aid":"02372ba208415152","bus":"Bus C","accessToken":"kTmTKRd11CPX7RhXTVZY"}]}
+        """.trimIndent()
+
+        val configurationBus = mutableListOf<ConfigurationBus>()
+
+        val jsonObject = JSONObject(jsonString)
+        val jsonArray = jsonObject.getJSONArray("busConfig")
+
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.getJSONObject(i)
+            val aid = item.getString("aid")
+            val bus = item.getString("bus")
+            val accessToken = item.getString("accessToken")
+            configurationBus.add(ConfigurationBus(aid,bus,accessToken))
+        }
+        return configurationBus
+    }
 }
+
+data class ConfigurationBus(
+    val aid: String,
+    val type: String,
+    val token: String
+)
