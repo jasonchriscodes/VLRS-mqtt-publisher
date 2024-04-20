@@ -1,5 +1,6 @@
 package com.jason.publisher
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
@@ -8,6 +9,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.gson.Gson
@@ -18,6 +22,8 @@ import com.jason.publisher.model.BusConfig
 import com.jason.publisher.model.BusRoute
 import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
+import com.jason.publisher.services.ApiService
+import com.jason.publisher.services.ApiServiceBuilder
 import com.jason.publisher.services.LocationManager
 import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.NotificationManager
@@ -33,6 +39,9 @@ import org.osmdroid.views.overlay.ItemizedIconOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,6 +65,7 @@ class MainActivity : AppCompatActivity() {
 
     private var busName = ""
     private var token = ""
+    private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,8 +91,9 @@ class MainActivity : AppCompatActivity() {
         requestAdminMessage()
 
         binding.chatButton.setOnClickListener {
-            val intent = Intent(this, ChatActivity::class.java)
-            startActivity(intent)
+//            val intent = Intent(this, ChatActivity::class.java)
+//            startActivity(intent)
+            showChatDialog()
         }
     }
 
@@ -140,6 +151,61 @@ class MainActivity : AppCompatActivity() {
         sharedPrefMananger.saveMessageList(MSG_KEY, messageList)
 
         getMessageCount()
+    }
+
+    /**
+     * Shows a dialog for sending a message to the operator.
+     */
+    private fun showChatDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Send Message to Operator")
+        val input = EditText(this)
+        builder.setView(input)
+        builder.setPositiveButton("Send") { dI, _ ->
+            sendMessageToOperator(dI,input.text.toString())
+        }
+        builder.setNegativeButton("Cancel") { dialogInterface, _ -> dialogInterface.cancel() }
+        builder.show()
+    }
+
+    /**
+     * Sends a message to the operator via API service.
+     * @param dI The dialog interface.
+     * @param message The message to send.
+     */
+    private fun sendMessageToOperator(dI: DialogInterface?, message: String) {
+        val contentMessage = mapOf("operatorMessage" to message)
+        val call = apiService.postAttributes(
+            ApiService.BASE_URL+mqttManager.getUsername()+"/attributes",
+            "application/json",
+            contentMessage
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Message has been sent",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    dI?.cancel()
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "There is something wrong, try again!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "There is something wrong, try again!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
     }
 
     private fun startLocationUpdate() {
