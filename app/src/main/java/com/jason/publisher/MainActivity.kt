@@ -1,5 +1,6 @@
 package com.jason.publisher
 
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
@@ -28,6 +29,7 @@ import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.Bus
 import com.jason.publisher.model.BusConfig
 import com.jason.publisher.model.BusData
+import com.jason.publisher.model.BusItem
 import com.jason.publisher.model.BusRoute
 import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
@@ -77,7 +79,7 @@ class MainActivity : AppCompatActivity() {
     private var token = ""
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
-    private val arrBusData = Dummmy.getConfig()
+    private var arrBusData = Dummmy.getConfig()
     private var clientKeys = "latitude,longitude,bearing,speed,direction"
 
     private var hoursDeparture = 0
@@ -86,6 +88,7 @@ class MainActivity : AppCompatActivity() {
     private var departureTime = "00:00:00"
     private var isFirstTime = false
     private lateinit var timer: CountDownTimer
+    private lateinit var otherBusData : List<BusItem>
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
+        getAccessToken()
 
 
         locationManager = LocationManager(this)
@@ -108,13 +112,14 @@ class MainActivity : AppCompatActivity() {
         getMessageCount()
         startLocationUpdate()
         mapViewSetup()
-        subscribeAdminMessage()
         requestAdminMessage()
+        subscribeAdminMessage()
         sendDataAttributes()
 
         binding.chatButton.setOnClickListener {
 //            val intent = Intent(this, ChatActivity::class.java)
 //            startActivity(intent)
+
             showChatDialog()
         }
         // Set up spinner
@@ -124,7 +129,20 @@ class MainActivity : AppCompatActivity() {
 
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
-                showPopUpDialog()
+//                showPopUpDialog()
+            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    @SuppressLint("HardwareIds")
+    private fun getAccessToken() {
+        val listConfig = Dummmy.getConfig()
+        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        for (config in listConfig) {
+            if (config.aid == aid) {
+                token = config.accessToken
+                break
+            }
         }
     }
 
@@ -182,6 +200,7 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("sharedKeys","message")
         val jsonString = jsonObject.toString()
         val handler = Handler(Looper.getMainLooper())
+        mqttManager.publish(PUB_MSG_TOPIC, jsonString)
         handler.post(object : Runnable {
             override fun run() {
                 mqttManager.publish(PUB_MSG_TOPIC, jsonString)
@@ -464,16 +483,33 @@ class MainActivity : AppCompatActivity() {
         direction = intent.getStringExtra("dir").toString()
         lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
 
-        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
         token = intent.getStringExtra(Constant.tokenKey).toString()
-
-        arrBusData.filter { it.aid != aid }
+        Log.d("arrBusDataOnline1", arrBusData.toString())
+        Log.d("aidOnline", aid.toString())
+        arrBusData = arrBusData.filter { it.aid != aid }
+        Log.d("arrBusDataOnline2", arrBusData.toString())
         for (bus in arrBusData) {
-            markerBus[bus.token] = Marker(binding.map)
-            markerBus[bus.token]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
-            markerBus[bus.token]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            markerBus[bus.accessToken] = Marker(binding.map)
+            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+            markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
+    }
+
+    /**
+     * Sends data attributes to the server.
+     */
+    private fun sendDataAttributes(){
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                for (bus in arrBusData) {
+                    getAttributes(apiService, bus.accessToken, clientKeys)
+                }
+                handler.postDelayed(this, 3000)
+            }
+        }, 0)
     }
 
     /**
@@ -498,7 +534,7 @@ class MainActivity : AppCompatActivity() {
                         val berCus = response.body()!!.client.bearingCustomer ?: 0.0F
                         Log.d( "Check Array", arrBusData.size.toString())
                         for (bus in arrBusData) {
-                            if (token == bus.token) {
+                            if (token == bus.accessToken) {
                                 markerBus[token]!!.position = GeoPoint(lat, lon)
                                 markerBus[token]!!.rotation = ber
                                 binding.map.overlays.add(markerBus[token])
@@ -513,24 +549,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
-                TODO("Not yet implemented")
+                Log.d("","")
             }
         })
-    }
-
-    /**
-     * Sends data attributes to the server.
-     */
-    private fun sendDataAttributes(){
-        val handler = Handler(Looper.getMainLooper())
-        handler.postDelayed(object : Runnable {
-            override fun run() {
-                for (bus in arrBusData) {
-                    getAttributes(apiService, bus.token, clientKeys)
-                }
-                handler.postDelayed(this, 3000)
-            }
-        }, 0)
     }
 
     private fun getMessageCount() {

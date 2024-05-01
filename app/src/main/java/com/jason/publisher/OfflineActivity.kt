@@ -783,8 +783,12 @@ class OfflineActivity : AppCompatActivity() {
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
 
         val busData = intent.getParcelableExtra(Constant.busDataKey, BusData::class.java)
+
         arrBusData = busData!!.sharedBus
+        Log.d("arrBusDataOffline1", arrBusData.toString())
+        Log.d("aidOffLine", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
+        Log.d("arrBusDataOffline2", arrBusData.toString())
         for (bus in arrBusData) {
             markerBus[bus.accessToken] = Marker(binding.map)
             markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
