@@ -30,6 +30,10 @@ class MqttManager(
         }
     }
 
+    fun isMqttConnect(): Boolean {
+        return mqttClient.isConnected
+    }
+
     fun publish(topic: String, message: String, qos: Int = 0) {
         try {
             Log.d("mqtt manager", "publish method call")

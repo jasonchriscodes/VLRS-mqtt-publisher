@@ -33,7 +33,7 @@ import org.json.JSONObject
  */
 @SuppressLint("CustomSplashScreen")
 class SplashScreen : AppCompatActivity() {
-    private lateinit var mqttManager: MqttManager
+//    private lateinit var mqttManager: MqttManager
     private lateinit var locationManager: LocationManager
     private lateinit var sharedPrefMananger: SharedPrefMananger
     private lateinit var modeSelectionDialog: ModeSelectionDialog
@@ -42,7 +42,7 @@ class SplashScreen : AppCompatActivity() {
     var name = ""
     private var accessToken = ""
     private var aaid = ""
-    private val db = Firebase.firestore
+//    private val db = Firebase.firestore
     private lateinit var busItem: BusItem
 
     private var latitude = 0.0
@@ -67,30 +67,30 @@ class SplashScreen : AppCompatActivity() {
         Log.d("aaid bus a:", aaid)
         sharedPrefMananger = SharedPrefMananger(this)
 
-        val colRef = db.collection("config").get()
-        colRef.addOnSuccessListener { query ->
-            for (doc in query.documents) {
-                if (doc.data!!["aid"] == aaid) {
-                    name = doc.data!!["name"].toString()
-                    accessToken = doc.data!!["accessToken"].toString()
-                    sharedPrefMananger.saveString(Constant.deviceNameKey, name)
-                }
-            }
-        }
+//        val colRef = db.collection("config").get()
+//        colRef.addOnSuccessListener { query ->
+//            for (doc in query.documents) {
+//                if (doc.data!!["aid"] == aaid) {
+//                    name = doc.data!!["name"].toString()
+//                    accessToken = doc.data!!["accessToken"].toString()
+//                    sharedPrefMananger.saveString(Constant.deviceNameKey, name)
+//                }
+//            }
+//        }
 
         // initialize the MQTT manager with server URI and client ID
-        mqttManager =
-            MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
+//        mqttManager =
+//            MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
         locationManager = LocationManager(this)
         startLocationUpdate()
 
         routeToNextScreen()
 
         // subscribe to a MQTT topic for attribute responses and update UI accordingly
-        mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
-            data = message
-        }
-        requestData()
+//        mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
+//            data = message
+//        }
+//        requestData()
     }
 
     /**
@@ -109,15 +109,15 @@ class SplashScreen : AppCompatActivity() {
         modeSelectionDialog.showModeSelectionDialog(object : ModeSelectionDialog.ModeSelectionListener {
             override fun onModeSelected(mode: String) {
                 var intent = Intent(this@SplashScreen, MainActivity::class.java)
-                val busData: BusData
+//                val busData: BusData
                 if (mode == "Offline") {
                     intent = Intent(this@SplashScreen, OfflineActivity::class.java)
-                    busData = getRoutesAndStops(true)
+//                    busData = getRoutesAndStops(true)
                 } else {
-                    busData = getRoutesAndStops(false)
+//                    busData = getRoutesAndStops(false)
                 }
-                Log.d("busdata: ", busData.toString())
-                intent.putExtra(Constant.busDataKey, busData)
+//                Log.d("busdata: ", busData.toString())
+//                intent.putExtra(Constant.busDataKey, busData)
                 intent.putExtra(Constant.deviceNameKey, name)
                 intent.putExtra(Constant.tokenKey, accessToken)
                 intent.putExtra(Constant.aidKey, aaid)
@@ -128,7 +128,7 @@ class SplashScreen : AppCompatActivity() {
                 intent.putExtra("spe", speed)
                 intent.putExtra("dir", direction)
 
-                mqttManager.disconnect()
+//                mqttManager.disconnect()
                 startActivity(intent)
                 finish()
             }
@@ -213,7 +213,7 @@ class SplashScreen : AppCompatActivity() {
         val jsonObject = JSONObject()
         jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing,bearingCustomer")
         val jsonString = jsonObject.toString()
-        mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
+//        mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
     }
 
 }
