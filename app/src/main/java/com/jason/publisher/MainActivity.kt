@@ -26,6 +26,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
+import com.jason.publisher.model.AttributesData
 import com.jason.publisher.model.Bus
 import com.jason.publisher.model.BusConfig
 import com.jason.publisher.model.BusData
@@ -114,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         mapViewSetup()
         requestAdminMessage()
         subscribeAdminMessage()
-        sendDataAttributes()
+        sendRequestAttributes()
 
         binding.chatButton.setOnClickListener {
 //            val intent = Intent(this, ChatActivity::class.java)
@@ -211,6 +212,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun subscribeAdminMessage() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
+            Log.d("Message from admin",message)
             runOnUiThread {
                 val gson = Gson()
                 val data = gson.fromJson(message, Bus::class.java)
@@ -401,10 +403,37 @@ class MainActivity : AppCompatActivity() {
                 binding.map.overlays.add(marker)
                 binding.map.invalidate()
                 publishTelemetryData()
+                updateClientAttributes()
                 handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
         handler.post(updateRunnable)
+    }
+
+    private fun updateClientAttributes() {
+        val url = ApiService.BASE_URL + "$token/attributes"
+        val attributesData = AttributesData(latitude, longitude, bearing, null,speed, direction)
+        val call = apiService.postAttributes(
+            url = url,
+            "application/json",
+            requestBody = attributesData
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                Log.d("Client Attributes", response.message().toString())
+                Log.d("Client Attributes", response.code().toString())
+                Log.d("Client Attributes", response.errorBody().toString())
+                if (response.isSuccessful) {
+                    Log.d("Client Attributes", "Berhasil")
+                } else {
+                    Log.d("Client Attributes", "Gagal")
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Log.d("Client Attributes", t.message.toString())
+            }
+        })
     }
 
     /**
@@ -485,7 +514,7 @@ class MainActivity : AppCompatActivity() {
 
         val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
-        token = intent.getStringExtra(Constant.tokenKey).toString()
+//        token = intent.getStringExtra(Constant.tokenKey).toString()
         Log.d("arrBusDataOnline1", arrBusData.toString())
         Log.d("aidOnline", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
@@ -500,7 +529,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Sends data attributes to the server.
      */
-    private fun sendDataAttributes(){
+    private fun sendRequestAttributes(){
         val handler = Handler(Looper.getMainLooper())
         handler.postDelayed(object : Runnable {
             override fun run() {
@@ -529,10 +558,10 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     if (response.body()?.client != null){
                         val lat = response.body()?.client?.latitude ?: 0.0
-                        val lon = response.body()!!.client.longitude ?: 0.0
-                        val ber = response.body()!!.client.bearing ?: 0.0F
-                        val berCus = response.body()!!.client.bearingCustomer ?: 0.0F
-                        Log.d( "Check Array", arrBusData.size.toString())
+                        val lon = response.body()!!.client.longitude
+                        val ber = response.body()!!.client.bearing
+                        val berCus = response.body()!!.client.bearingCustomer
+                        Log.d( "Check Data", "$lat $lon")
                         for (bus in arrBusData) {
                             if (token == bus.accessToken) {
                                 markerBus[token]!!.position = GeoPoint(lat, lon)

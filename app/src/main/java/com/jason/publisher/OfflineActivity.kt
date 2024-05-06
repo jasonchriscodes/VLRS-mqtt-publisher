@@ -288,7 +288,7 @@ class OfflineActivity : AppCompatActivity() {
                 publishShowDepartureTime() // Added to publish the show departure time
                 publishDepartureTime()
                 publishRouteDirection()
-                sendDataAttributes()
+                sendRequestAttributes()
                 // Start the countdown timer
                 startCountdown()
             }
@@ -803,7 +803,7 @@ class OfflineActivity : AppCompatActivity() {
     /**
      * Sends data attributes to the server.
      */
-    private fun sendDataAttributes(){
+    private fun sendRequestAttributes(){
         val handler = Handler(Looper.getMainLooper())
         handler.postDelayed(object : Runnable {
             override fun run() {

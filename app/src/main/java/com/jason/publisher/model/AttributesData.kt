@@ -12,7 +12,7 @@ data class AttributesData(
     val latitude: Double,
     val longitude: Double,
     val bearing: Float,
-    val bearingCustomer: Float,
+    val bearingCustomer: Float?,
     val speed: Float,
     val direction: String,
 )
