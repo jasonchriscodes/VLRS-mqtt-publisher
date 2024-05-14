@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
     private var token = ""
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
-    private var arrBusData = Dummmy.getConfig()
+    private var arrBusData = OnlineData.getConfig()
     private var clientKeys = "latitude,longitude,bearing,speed,direction"
 
     private var hoursDeparture = 0
@@ -137,7 +137,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("HardwareIds")
     private fun getAccessToken() {
-        val listConfig = Dummmy.getConfig()
+        val listConfig = OnlineData.getConfig()
         val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         for (config in listConfig) {
             if (config.aid == aid) {
@@ -345,8 +345,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun generatePolyline() {
-        val busRoute = Dummmy.getRoutesOnline()
-        val busStop = Dummmy.getBusStopOnline()
+        val busRoute = OnlineData.getRoutesOnline()
+        val busStop = OnlineData.getBusStopOnline()
 //        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
 //        val routes = busData["routes"] as BusRoute
 //        routes.jsonMember1!!.forEach {
@@ -461,7 +461,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun publishTelemetryData() {
+        val aid = intent.getStringExtra(Constant.aidKey)
         val jsonObject = JSONObject()
+        val busname = findBusNameByAid(aid)
+        if (busname != null) {
+            Log.d("busname", busname)
+        }
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
         jsonObject.put("bearing", bearing)
@@ -470,6 +475,7 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("bus", busConfig)
         jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
+        jsonObject.put("bus", busname)
         Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
@@ -480,6 +486,27 @@ class MainActivity : AppCompatActivity() {
             message = "Lat: $latitude, Long: $longitude, Direction: $direction",
             false
         )
+    }
+
+    /**
+     * Finds the bus name by its associated ID.
+     *
+     * @param aid the ID of the bus.
+     * @return the name of the bus or null if not found.
+     */
+    fun findBusNameByAid(aid: String?): String? {
+        if (aid == null) {
+            Log.e("findBusNameByAid", "AID is null")
+            return null
+        }
+
+        val configList = OfflineData.getConfig()
+        val busItem = configList.find { it.aid == aid }
+
+        return busItem?.bus ?: run {
+            Log.e("findBusNameByAid", "No bus found with AID: $aid")
+            null
+        }
     }
 
     /**
@@ -514,6 +541,7 @@ class MainActivity : AppCompatActivity() {
 
         val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
+
 //        token = intent.getStringExtra(Constant.tokenKey).toString()
         Log.d("arrBusDataOnline1", arrBusData.toString())
         Log.d("aidOnline", aid.toString())
