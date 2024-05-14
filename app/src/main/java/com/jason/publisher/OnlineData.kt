@@ -4,7 +4,7 @@ import com.jason.publisher.model.BusItem
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 
-object Dummmy {
+object OnlineData {
     var listData = listOf(
         GeoPoint(-36.780120000000004, 174.99216),
         GeoPoint(-36.77995, 174.99204),

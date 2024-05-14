@@ -14,8 +14,8 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
-import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.NumberPicker
@@ -26,20 +26,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.Helper.createBusStopSymbol
 import com.jason.publisher.databinding.ActivityOfflineBinding
 import com.jason.publisher.model.AttributesData
 import com.jason.publisher.model.Bus
-import com.jason.publisher.model.BusBearing
-import com.jason.publisher.model.BusBearingCustomer
-import com.jason.publisher.model.BusData
-import com.jason.publisher.model.BusItem
 import com.jason.publisher.model.Coordinate
-import com.jason.publisher.model.JsonMember1Item
 import com.jason.publisher.model.Message
 import com.jason.publisher.services.ApiService
 import com.jason.publisher.services.ApiServiceBuilder
@@ -91,14 +84,15 @@ class OfflineActivity : AppCompatActivity() {
     private var busConfig = ""
 
     private var routeIndex = 0 // Initialize index at the start
-    private var busRoute = ArrayList<GeoPoint>()
-    private var busStop = ArrayList<GeoPoint>()
-    private var busBearing = ArrayList<BusBearing>()
-    private var busBearingCustomer = ArrayList<BusBearingCustomer>()
+    private var busRoute = OfflineData.getRoutesOffline()
+    private var busStop = OfflineData.getBusStopOffline()
+    private var busBearing = OfflineData.getBearing()
+    private var busBearingCustomer = OfflineData.getBearingCustomer()
 
     private var lastMessage = ""
     private var totalMessage = 0
 
+    private var token = ""
     private lateinit var sensorManager: SensorManager
     private var mAccelerometer = FloatArray(3)
     private var mGeomagneic = FloatArray(3)
@@ -116,7 +110,7 @@ class OfflineActivity : AppCompatActivity() {
     private var clientKeys = "latitude,longitude,bearing,bearingCustomer,speed,direction"
     val handler = Handler(Looper.getMainLooper())
     private var sharedBus = ArrayList<String> ()
-    private lateinit var arrBusData : List<BusItem>
+    private var arrBusData = OfflineData.getConfig()
     private var markerBus = HashMap<String, Marker>()
     private var routeDirection = "forward"
 
@@ -139,18 +133,20 @@ class OfflineActivity : AppCompatActivity() {
         acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         // initialize each service used
-        val token = intent.getStringExtra(Constant.tokenKey)
-        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token!!)
+//        val token = intent.getStringExtra(Constant.tokenKey)
+        getAccessToken()
+        mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
         sharedPrefMananger = SharedPrefMananger(this)
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            getDefaultConfigValue()
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            getDefaultConfigValue()
+//        }
+        getDefaultConfigValue()
 
         getMessageCount()
-        subscribeAdminMessage()
         requestAdminMessage()
+        subscribeAdminMessage()
 
         busMarker = Marker(binding.map)
         mapController = binding.map.controller as MapController
@@ -187,6 +183,17 @@ class OfflineActivity : AppCompatActivity() {
             } else
             {
                 this.recreate()
+            }
+        }
+    }
+
+    private fun getAccessToken() {
+        val listConfig = OnlineData.getConfig()
+        val aid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        for (config in listConfig) {
+            if (config.aid == aid) {
+                token = config.accessToken
+                break
             }
         }
     }
@@ -282,9 +289,10 @@ class OfflineActivity : AppCompatActivity() {
                 showDepartureTime = spinner.selectedItem.toString()
                 Log.d("departureTimeDialog", showDepartureTime)
                 mapViewSetup()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    startLocationUpdate()
-                }
+//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                    startLocationUpdate()
+//                }
+                startLocationUpdate()
                 publishShowDepartureTime() // Added to publish the show departure time
                 publishDepartureTime()
                 publishRouteDirection()
@@ -321,14 +329,11 @@ class OfflineActivity : AppCompatActivity() {
      */
     private fun subscribeAdminMessage() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
+            Log.d("Message from admin",message)
             runOnUiThread {
                 val gson = Gson()
                 val data = gson.fromJson(message, Bus::class.java)
                 val msg = data.shared!!.message!!
-
-                // check whether the notification received
-                // is the same as the previous notification
-                // before to store it or show it as notification
                 if (lastMessage != msg) {
                     saveNewMessage(msg)
                     showNotification(msg)
@@ -397,13 +402,13 @@ class OfflineActivity : AppCompatActivity() {
         var isForward =
             true // Flag to indicate the direction of movement, true for forward, false for backward
 
-        val busData = intent.getParcelableExtra(Constant.busDataKey, BusData::class.java)
+//        val busData = intent.getParcelableExtra(Constant.busDataKey, BusData::class.java)
         latitude = busRoute[routeIndex].latitude
         longitude = busRoute[routeIndex].longitude
         PolarCoordinateToBearing(latitude,longitude,latitude,longitude)
-        val stops = busData!!.stops!!.jsonMember1 as List<JsonMember1Item>
+        val stops = busStop
         stops.forEach {
-            busStop.add(GeoPoint(it.latitude!!, it.longitude!!))
+//            busStop.add(GeoPoint(it.latitude!!, it.longitude!!))
         }
 
         generatePolyline()
@@ -478,12 +483,12 @@ class OfflineActivity : AppCompatActivity() {
 
             for (index in fromList) {
                 routeData["$index"]?.forEach { position ->
-                    busRoute.add(GeoPoint(position.latitude, position.longitude))
+                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
                 }
             }
             for (index in toList) {
                 routeData["$index"]?.forEach { position ->
-                    busRoute.add(GeoPoint(position.latitude, position.longitude))
+                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
                 }
             }
         } catch (e: IOException) {
@@ -606,6 +611,7 @@ class OfflineActivity : AppCompatActivity() {
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
                 publishTelemetryData()
+                updateClientAttributes()
                 Log.d("updateMarker", "")
                 if (routeIndex == busBearing.lastIndex) {
                     routeIndex = 0
@@ -617,6 +623,32 @@ class OfflineActivity : AppCompatActivity() {
             }
         }
         handler.post(updateRunnable)
+    }
+
+    private fun updateClientAttributes() {
+        val url = ApiService.BASE_URL + "$token/attributes"
+        val attributesData = AttributesData(latitude, longitude, bearing, null,speed, direction)
+        val call = apiService.postAttributes(
+            url = url,
+            "application/json",
+            requestBody = attributesData
+        )
+        call.enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                Log.d("Client Attributes", response.message().toString())
+                Log.d("Client Attributes", response.code().toString())
+                Log.d("Client Attributes", response.errorBody().toString())
+                if (response.isSuccessful) {
+                    Log.d("Client Attributes", "Berhasil")
+                } else {
+                    Log.d("Client Attributes", "Gagal")
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Log.d("Client Attributes", t.message.toString())
+            }
+        })
     }
 
 
@@ -649,7 +681,12 @@ class OfflineActivity : AppCompatActivity() {
      */
     @SuppressLint("LongLogTag")
     private fun publishTelemetryData() {
+        val aid = intent.getStringExtra(Constant.aidKey)
         val jsonObject = JSONObject()
+        val busname = findBusNameByAid(aid)
+        if (busname != null) {
+            Log.d("busname", busname)
+        }
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
         jsonObject.put("bearing", bearing)
@@ -660,6 +697,7 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
         jsonObject.put("routeDirection", routeDirection)
+        jsonObject.put("bus", busname)
         Log.d("bearingTelemetry", bearing.toString())
         Log.d("departureTimeTelemetry:", departureTime)
         Log.d("departureTimeShowTelemetry:", showDepartureTime)
@@ -675,6 +713,29 @@ class OfflineActivity : AppCompatActivity() {
             false
         )
     }
+
+    /**
+     * Finds the bus name by its associated ID.
+     *
+     * @param aid the ID of the bus.
+     * @return the name of the bus or null if not found.
+     */
+    fun findBusNameByAid(aid: String?): String? {
+        if (aid == null) {
+            Log.e("findBusNameByAid", "AID is null")
+            return null
+        }
+
+        val configList = OfflineData.getConfig()
+        val busItem = configList.find { it.aid == aid }
+
+        return busItem?.bus ?: run {
+            Log.e("findBusNameByAid", "No bus found with AID: $aid")
+            null
+        }
+    }
+
+
 
     /**
      * Convert polar coordinate to bearing.
@@ -782,9 +843,9 @@ class OfflineActivity : AppCompatActivity() {
         val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
 
-        val busData = intent.getParcelableExtra(Constant.busDataKey, BusData::class.java)
+//        val busData = intent.getParcelableExtra(Constant.busDataKey, BusData::class.java)
 
-        arrBusData = busData!!.sharedBus
+//        arrBusData = busData!!.sharedBus
         Log.d("arrBusDataOffline1", arrBusData.toString())
         Log.d("aidOffLine", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
@@ -794,9 +855,9 @@ class OfflineActivity : AppCompatActivity() {
             markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
             markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
-
-        busBearing = busData.bearing as ArrayList<BusBearing>
-        busBearingCustomer = busData.bearingCust as ArrayList<BusBearingCustomer>
+        Log.d("Marker Bus",markerBus.toString())
+//        busBearing = busBearing as ArrayList<BusBearing>
+//        busBearingCustomer = bearingCustomer as ArrayList<BusBearingCustomer>
         Log.d("Bearing Length", busBearing.size.toString())
     }
 
