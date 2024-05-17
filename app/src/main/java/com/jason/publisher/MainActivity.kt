@@ -90,6 +90,7 @@ class MainActivity : AppCompatActivity() {
     private var isFirstTime = false
     private lateinit var timer: CountDownTimer
     private lateinit var otherBusData : List<BusItem>
+    private var firstTime = true
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         startLocationUpdate()
         mapViewSetup()
         requestAdminMessage()
-        subscribeAdminMessage()
+        subscribeSharedData()
         sendRequestAttributes()
 
         binding.chatButton.setOnClickListener {
@@ -198,7 +199,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun requestAdminMessage() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys","message")
+        jsonObject.put("sharedKeys","message,busRoute,busStop,config")
         val jsonString = jsonObject.toString()
         val handler = Handler(Looper.getMainLooper())
         mqttManager.publish(PUB_MSG_TOPIC, jsonString)
@@ -210,16 +211,30 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun subscribeAdminMessage() {
+    private fun subscribeSharedData() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
             Log.d("Message from admin",message)
             runOnUiThread {
                 val gson = Gson()
                 val data = gson.fromJson(message, Bus::class.java)
-                val msg = data.shared!!.message!!
+                val msg = data.shared?.message
+                val route = data.shared?.busRoute1
+                val stops = data.shared?.busStop1
+                Log.d(" Check message", message.toString())
+                Log.d(" Check route", route?.jsonMember1.toString())
+                if (firstTime) {
+                    if (route != null) {
+                        if (stops != null) {
+                            generatePolyline(route,stops)
+                            firstTime = false
+                        }
+                    }
+                }
                 if (lastMessage != msg) {
-                    saveNewMessage(msg)
-                    showNotification(msg)
+                    if (msg != null) {
+                        saveNewMessage(msg)
+                        showNotification(msg)
+                    }
                 }
             }
         }
@@ -341,12 +356,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateMarkerPosition(marker)
-        generatePolyline()
+//        generatePolyline()
     }
 
-    private fun generatePolyline() {
-        val busRoute = OnlineData.getRoutesOnline()
-        val busStop = OnlineData.getBusStopOnline()
+    private fun generatePolyline(busRoute: BusRoute,busStop: BusStop) {
+//        val busRoute = OfflineData.getRoutesOffline()
+//        val busStop = OfflineData.getBusStopOffline()
 //        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
 //        val routes = busData["routes"] as BusRoute
 //        routes.jsonMember1!!.forEach {
@@ -356,16 +371,22 @@ class MainActivity : AppCompatActivity() {
 //        stops.jsonMember1!!.forEach {
 //            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
 //        }
+        val routes = mutableListOf<GeoPoint>()
+        for (route in busRoute.jsonMember1!!) {
+            routes.add(GeoPoint(route!!.latitude!!, route.longitude!!))
+        }
+        Log.d("Check test","test")
+        Log.d("Check Length Route",routes.size.toString())
 
         val overlayItems = ArrayList<OverlayItem>()
-        busStop.forEachIndexed { index, geoPoint ->
+        busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-//            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+    //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
             val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
-                geoPoint
+                GeoPoint(geoPoint!!.latitude!!, geoPoint.longitude!!)
             )
             marker.setMarker(busStopSymbol)
             overlayItems.add(marker)
@@ -386,7 +407,7 @@ class MainActivity : AppCompatActivity() {
         binding.map.overlays.add(overlayItem)
 
         val polyline = Polyline()
-        polyline.setPoints(busRoute)
+        polyline.setPoints(routes)
         polyline.outlinePaint.color = Color.BLUE
         polyline.outlinePaint.strokeWidth = 5f
 
@@ -543,6 +564,7 @@ class MainActivity : AppCompatActivity() {
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
 
 //        token = intent.getStringExtra(Constant.tokenKey).toString()
+
         Log.d("arrBusDataOnline1", arrBusData.toString())
         Log.d("aidOnline", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
