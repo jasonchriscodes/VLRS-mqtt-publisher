@@ -484,7 +484,7 @@ class MainActivity : AppCompatActivity() {
     private fun publishTelemetryData() {
         val aid = intent.getStringExtra(Constant.aidKey)
         val jsonObject = JSONObject()
-        val busname = findBusNameByAid(aid)
+        val busname = Utils.findBusNameByAid(aid)
         if (busname != null) {
             Log.d("busname", busname)
         }
