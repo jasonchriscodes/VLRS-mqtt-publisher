@@ -33,14 +33,14 @@ class MainActivityTest {
     @Test
     fun testGetAccessToken_ConfigFound() {
         val mockConfigList = listOf(
-            BusItem(aid = "123", bus = "Bus A", accessToken = "1"),
-            BusItem(aid = "Test1", bus = "Bus B", accessToken = "2")
+            BusItem(aid = "8d34bdc9a5c78c42", bus = "Bus A", accessToken = "z0MQXzmMsNZwiD9Pwn6J"),
+            BusItem(aid = "2b039058a1a5f8a3", bus = "Bus B", accessToken = "YiSbp8zzJyt3htZ7ECI0")
         )
 
         every { OnlineData.getConfig() } returns mockConfigList
 
-        val result = Utils.getAccessToken(mockConfigList, "123")
-        assertEquals("1", result)
+        val result = Utils.getAccessToken(mockConfigList, "8d34bdc9a5c78c42")
+        assertEquals("z0MQXzmMsNZwiD9Pwn6J", result)
     }
 
     @Test
@@ -49,17 +49,17 @@ class MainActivityTest {
 
         every { OnlineData.getConfig() } returns mockConfigList
 
-        val result = Utils.getAccessToken(mockConfigList, "123")
+        val result = Utils.getAccessToken(mockConfigList, "8d34bdc9a5c78c42")
         assertNull(result)
     }
 
     @Test
     fun findBusNameByAid_aidFound() {
-        val aid = "123"
+        val aid = "8d34bdc9a5c78c42"
         val bus = "Bus A"
         val mockConfigList = listOf(
-            BusItem(aid = "123", bus = "Bus A", accessToken = "1"),
-            BusItem(aid = "Test1", bus = "Bus B", accessToken = "1")
+            BusItem(aid = "8d34bdc9a5c78c42", bus = "Bus A", accessToken = "z0MQXzmMsNZwiD9Pwn6J"),
+            BusItem(aid = "2b039058a1a5f8a3", bus = "Bus B", accessToken = "YiSbp8zzJyt3htZ7ECI0")
         )
 
         every { OfflineData.getConfig() } returns mockConfigList
