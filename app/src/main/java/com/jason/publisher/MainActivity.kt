@@ -1,10 +1,15 @@
 package com.jason.publisher
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -76,8 +81,14 @@ class MainActivity : AppCompatActivity() {
     private var lastMessage = ""
     private var totalMessage = 0
 
-    private var busName = ""
     private var token = ""
+    private lateinit var sensorManager: SensorManager
+    private var mAccelerometer = FloatArray(3)
+    private var mGeomagneic = FloatArray(3)
+    private var compassSensor: Sensor? = null
+    private var acceleroSensor: Sensor? = null
+
+    private var busName = ""
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
     private var arrBusData = OnlineData.getConfig()
@@ -100,6 +111,11 @@ class MainActivity : AppCompatActivity() {
 
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
         getAccessToken()
+
+        // initialize each sensor used
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
 
         locationManager = LocationManager(this)
@@ -329,9 +345,9 @@ class MainActivity : AppCompatActivity() {
             override fun onLocationUpdate(location: Location) {
                 latitude = location.latitude
                 longitude = location.longitude
-                bearing = location.bearing
+//                bearing = location.bearing
                 speed = location.speed
-                direction = Helper.bearingToDirection(location.bearing)
+//                direction = Helper.bearingToDirection(location.bearing)
             }
         })
     }
@@ -638,6 +654,73 @@ class MainActivity : AppCompatActivity() {
         binding.notificationBadge.text = totalMessage.toString()
     }
 
+    /**
+     * Listener for sensor changes, specifically for accelerometer and compass sensors.
+     * Updates the bearing and direction based on sensor readings.
+     */
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            val alpha = 0.97f
+            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
+                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
+                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
+            }
+            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
+                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
+                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
+            }
+            val r = FloatArray(9)
+            val i = FloatArray(9)
+
+            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
+            if (success) {
+                val orientation = FloatArray(3)
+                SensorManager.getOrientation(r, orientation)
+                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+                bearing = (bearing + 360) % 360
+                direction = Helper.bearingToDirection(bearing)
+            }
+        }
+
+        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+            // TODO: handle accuracy
+        }
+
+    }
+
+    /**
+     * Resumes sensor listeners when the activity is resumed.
+     */
+    override fun onResume() {
+        super.onResume()
+        // unregister to avoid the sensor continuing to run
+        // even though the application is not running
+        // and to anticipate power usage
+        sensorManager.registerListener(
+            sensorListener,
+            compassSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        sensorManager.registerListener(
+            sensorListener,
+            acceleroSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+    }
+
+    /**
+     * Pauses sensor listeners when the activity is paused.
+     */
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(sensorListener)
+    }
+
+    /**
+     * Stops sound, disconnects MQTT manager, and cleans up resources when the activity is destroyed.
+     */
     override fun onDestroy() {
         soundManager.stopSound()
         mqttManager.disconnect()
