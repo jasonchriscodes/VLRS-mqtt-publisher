@@ -1,10 +1,15 @@
 package com.jason.publisher
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -76,8 +81,14 @@ class MainActivity : AppCompatActivity() {
     private var lastMessage = ""
     private var totalMessage = 0
 
-    private var busName = ""
     private var token = ""
+    private lateinit var sensorManager: SensorManager
+    private var mAccelerometer = FloatArray(3)
+    private var mGeomagneic = FloatArray(3)
+    private var compassSensor: Sensor? = null
+    private var acceleroSensor: Sensor? = null
+
+    private var busName = ""
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
     private var arrBusData = OnlineData.getConfig()
@@ -90,6 +101,7 @@ class MainActivity : AppCompatActivity() {
     private var isFirstTime = false
     private lateinit var timer: CountDownTimer
     private lateinit var otherBusData : List<BusItem>
+    private var firstTime = true
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,6 +111,11 @@ class MainActivity : AppCompatActivity() {
 
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
         getAccessToken()
+
+        // initialize each sensor used
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
 
         locationManager = LocationManager(this)
@@ -114,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         startLocationUpdate()
         mapViewSetup()
         requestAdminMessage()
-        subscribeAdminMessage()
+        subscribeSharedData()
         sendRequestAttributes()
 
         binding.chatButton.setOnClickListener {
@@ -130,8 +147,8 @@ class MainActivity : AppCompatActivity() {
 
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
-//                showPopUpDialog()
-            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
+                showPopUpDialog()
+//            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -198,7 +215,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun requestAdminMessage() {
         val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys","message")
+        jsonObject.put("sharedKeys","message,busRoute,busStop,config")
         val jsonString = jsonObject.toString()
         val handler = Handler(Looper.getMainLooper())
         mqttManager.publish(PUB_MSG_TOPIC, jsonString)
@@ -210,16 +227,30 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun subscribeAdminMessage() {
+    private fun subscribeSharedData() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
             Log.d("Message from admin",message)
             runOnUiThread {
                 val gson = Gson()
                 val data = gson.fromJson(message, Bus::class.java)
-                val msg = data.shared!!.message!!
+                val msg = data.shared?.message
+                val route = data.shared?.busRoute1
+                val stops = data.shared?.busStop1
+                Log.d(" Check message", message.toString())
+                Log.d(" Check route", route?.jsonMember1.toString())
+                if (firstTime) {
+                    if (route != null) {
+                        if (stops != null) {
+                            generatePolyline(route,stops)
+                            firstTime = false
+                        }
+                    }
+                }
                 if (lastMessage != msg) {
-                    saveNewMessage(msg)
-                    showNotification(msg)
+                    if (msg != null) {
+                        saveNewMessage(msg)
+                        showNotification(msg)
+                    }
                 }
             }
         }
@@ -314,9 +345,9 @@ class MainActivity : AppCompatActivity() {
             override fun onLocationUpdate(location: Location) {
                 latitude = location.latitude
                 longitude = location.longitude
-                bearing = location.bearing
+//                bearing = location.bearing
                 speed = location.speed
-                direction = Helper.bearingToDirection(location.bearing)
+//                direction = Helper.bearingToDirection(location.bearing)
             }
         })
     }
@@ -341,12 +372,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateMarkerPosition(marker)
-        generatePolyline()
+//        generatePolyline()
     }
 
-    private fun generatePolyline() {
-        val busRoute = OnlineData.getRoutesOnline()
-        val busStop = OnlineData.getBusStopOnline()
+    private fun generatePolyline(busRoute: BusRoute,busStop: BusStop) {
+//        val busRoute = OfflineData.getRoutesOffline()
+//        val busStop = OfflineData.getBusStopOffline()
 //        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
 //        val routes = busData["routes"] as BusRoute
 //        routes.jsonMember1!!.forEach {
@@ -356,16 +387,22 @@ class MainActivity : AppCompatActivity() {
 //        stops.jsonMember1!!.forEach {
 //            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
 //        }
+        val routes = mutableListOf<GeoPoint>()
+        for (route in busRoute.jsonMember1!!) {
+            routes.add(GeoPoint(route!!.latitude!!, route.longitude!!))
+        }
+        Log.d("Check test","test")
+        Log.d("Check Length Route",routes.size.toString())
 
         val overlayItems = ArrayList<OverlayItem>()
-        busStop.forEachIndexed { index, geoPoint ->
+        busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-//            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+    //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
             val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
-                geoPoint
+                GeoPoint(geoPoint!!.latitude!!, geoPoint.longitude!!)
             )
             marker.setMarker(busStopSymbol)
             overlayItems.add(marker)
@@ -386,7 +423,7 @@ class MainActivity : AppCompatActivity() {
         binding.map.overlays.add(overlayItem)
 
         val polyline = Polyline()
-        polyline.setPoints(busRoute)
+        polyline.setPoints(routes)
         polyline.outlinePaint.color = Color.BLUE
         polyline.outlinePaint.strokeWidth = 5f
 
@@ -463,7 +500,7 @@ class MainActivity : AppCompatActivity() {
     private fun publishTelemetryData() {
         val aid = intent.getStringExtra(Constant.aidKey)
         val jsonObject = JSONObject()
-        val busname = findBusNameByAid(aid)
+        val busname = Utils.findBusNameByAid(aid)
         if (busname != null) {
             Log.d("busname", busname)
         }
@@ -543,6 +580,7 @@ class MainActivity : AppCompatActivity() {
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
 
 //        token = intent.getStringExtra(Constant.tokenKey).toString()
+
         Log.d("arrBusDataOnline1", arrBusData.toString())
         Log.d("aidOnline", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
@@ -616,6 +654,73 @@ class MainActivity : AppCompatActivity() {
         binding.notificationBadge.text = totalMessage.toString()
     }
 
+    /**
+     * Listener for sensor changes, specifically for accelerometer and compass sensors.
+     * Updates the bearing and direction based on sensor readings.
+     */
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            val alpha = 0.97f
+            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
+                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
+                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
+            }
+            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
+                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
+                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
+            }
+            val r = FloatArray(9)
+            val i = FloatArray(9)
+
+            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
+            if (success) {
+                val orientation = FloatArray(3)
+                SensorManager.getOrientation(r, orientation)
+                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+                bearing = (bearing + 360) % 360
+                direction = Helper.bearingToDirection(bearing)
+            }
+        }
+
+        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+            // TODO: handle accuracy
+        }
+
+    }
+
+    /**
+     * Resumes sensor listeners when the activity is resumed.
+     */
+    override fun onResume() {
+        super.onResume()
+        // unregister to avoid the sensor continuing to run
+        // even though the application is not running
+        // and to anticipate power usage
+        sensorManager.registerListener(
+            sensorListener,
+            compassSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        sensorManager.registerListener(
+            sensorListener,
+            acceleroSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+    }
+
+    /**
+     * Pauses sensor listeners when the activity is paused.
+     */
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(sensorListener)
+    }
+
+    /**
+     * Stops sound, disconnects MQTT manager, and cleans up resources when the activity is destroyed.
+     */
     override fun onDestroy() {
         soundManager.stopSound()
         mqttManager.disconnect()
