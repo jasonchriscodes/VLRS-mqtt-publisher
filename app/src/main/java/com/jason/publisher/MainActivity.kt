@@ -131,8 +131,8 @@ class MainActivity : AppCompatActivity() {
 
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
-//                showPopUpDialog()
-            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
+                showPopUpDialog()
+//            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
         }
     }
 
