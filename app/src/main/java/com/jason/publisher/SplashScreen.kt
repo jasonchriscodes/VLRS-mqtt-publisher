@@ -42,8 +42,6 @@ class SplashScreen : AppCompatActivity() {
     var name = ""
     private var accessToken = ""
     private var aaid = ""
-//    private val db = Firebase.firestore
-    private lateinit var busItem: BusItem
 
     private var latitude = 0.0
     private var longitude = 0.0

@@ -1009,7 +1009,6 @@ class OfflineActivity : AppCompatActivity() {
     companion object {
         const val SERVER_URI = "tcp://43.226.218.94:1883"
         const val CLIENT_ID = "jasonAndroidClientId"
-        const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
         private const val SUB_MSG_TOPIC = "v1/devices/me/attributes/response/+"
         private const val PUB_MSG_TOPIC = "v1/devices/me/attributes/request/1"
         private const val REQUEST_PERIODIC_TIME = 1000L

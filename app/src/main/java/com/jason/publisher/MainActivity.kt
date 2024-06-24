@@ -88,7 +88,6 @@ class MainActivity : AppCompatActivity() {
     private var compassSensor: Sensor? = null
     private var acceleroSensor: Sensor? = null
 
-    private var busName = ""
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
     private var arrBusData = OnlineData.getConfig()
@@ -100,7 +99,6 @@ class MainActivity : AppCompatActivity() {
     private var departureTime = "00:00:00"
     private var isFirstTime = false
     private lateinit var timer: CountDownTimer
-    private lateinit var otherBusData : List<BusItem>
     private var firstTime = true
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -353,7 +351,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun mapViewSetup() {
-        val center = GeoPoint(latitude, longitude)
+        val center = GeoPoint(-36.85571847211549, 174.7650322093214)
 
         val marker = Marker(binding.map)
         marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus2, null)
@@ -681,6 +679,7 @@ class MainActivity : AppCompatActivity() {
                 bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
                 bearing = (bearing + 360) % 360
                 direction = Helper.bearingToDirection(bearing)
+                Log.d("bearing value:", bearing.toString())
             }
         }
 
@@ -689,6 +688,8 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+
+
 
     /**
      * Resumes sensor listeners when the activity is resumed.
