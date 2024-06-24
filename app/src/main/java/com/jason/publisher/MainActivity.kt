@@ -22,6 +22,7 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.NumberPicker
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -70,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var soundManager: SoundManager
     private lateinit var mapController: MapController
+    private lateinit var bearingTextView: TextView
 
     private var latitude = 0.0
     private var longitude = 0.0
@@ -107,6 +109,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initialize the bearingTextView
+        bearingTextView = findViewById(R.id.bearingTextView)
+
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
         getAccessToken()
 
@@ -114,7 +119,6 @@ class MainActivity : AppCompatActivity() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
 
         locationManager = LocationManager(this)
         sharedPrefMananger = SharedPrefMananger(this)
@@ -145,7 +149,7 @@ class MainActivity : AppCompatActivity() {
 
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
-                showPopUpDialog()
+            showPopUpDialog()
 //            Toast.makeText(this, "is mqtt connect? " + mqttManager.isMqttConnect(), Toast.LENGTH_SHORT).show()
         }
     }
@@ -346,6 +350,8 @@ class MainActivity : AppCompatActivity() {
 //                bearing = location.bearing
                 speed = location.speed
 //                direction = Helper.bearingToDirection(location.bearing)
+                bearing = bearing
+                direction = Helper.bearingToDirection(bearing)
             }
         })
     }
@@ -395,7 +401,7 @@ class MainActivity : AppCompatActivity() {
         val overlayItems = ArrayList<OverlayItem>()
         busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-    //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
+            //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
             val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
@@ -459,9 +465,9 @@ class MainActivity : AppCompatActivity() {
                 Log.d("Client Attributes", response.code().toString())
                 Log.d("Client Attributes", response.errorBody().toString())
                 if (response.isSuccessful) {
-                    Log.d("Client Attributes", "Berhasil")
+                    Log.d("Client Attributes", "Successfull")
                 } else {
-                    Log.d("Client Attributes", "Gagal")
+                    Log.d("Client Attributes", "Fail")
                 }
             }
 
@@ -680,16 +686,18 @@ class MainActivity : AppCompatActivity() {
                 bearing = (bearing + 360) % 360
                 direction = Helper.bearingToDirection(bearing)
                 Log.d("bearing value:", bearing.toString())
+                updateBearingTextView()
             }
         }
-
         override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
             // TODO: handle accuracy
         }
-
     }
 
-
+    private fun updateBearingTextView() {
+        val bearingString = bearing.toString()
+        bearingTextView.text = "Current Bearing: $bearingString"
+    }
 
     /**
      * Resumes sensor listeners when the activity is resumed.
