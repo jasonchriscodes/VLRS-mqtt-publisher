@@ -1,15 +1,9 @@
 package com.jason.publisher
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.DialogInterface
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -30,13 +24,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
-import com.jason.publisher.Contacts.ChatActivity
 import com.jason.publisher.databinding.ActivityMainBinding
 import com.jason.publisher.model.AttributesData
 import com.jason.publisher.model.Bus
-import com.jason.publisher.model.BusConfig
-import com.jason.publisher.model.BusData
-import com.jason.publisher.model.BusItem
 import com.jason.publisher.model.BusRoute
 import com.jason.publisher.model.BusStop
 import com.jason.publisher.model.Message
@@ -61,6 +51,9 @@ import org.osmdroid.views.overlay.Polyline
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.lang.Math.atan2
+import java.lang.Math.cos
+import java.lang.Math.sin
 
 class MainActivity : AppCompatActivity() {
 
@@ -73,6 +66,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapController: MapController
     private lateinit var bearingTextView: TextView
 
+    private var lastLatitude = 0.0
+    private var lastLongitude = 0.0
     private var latitude = 0.0
     private var longitude = 0.0
     private var bearing = 0.0F
@@ -84,11 +79,11 @@ class MainActivity : AppCompatActivity() {
     private var totalMessage = 0
 
     private var token = ""
-    private lateinit var sensorManager: SensorManager
-    private var mAccelerometer = FloatArray(3)
-    private var mGeomagneic = FloatArray(3)
-    private var compassSensor: Sensor? = null
-    private var acceleroSensor: Sensor? = null
+//    private lateinit var sensorManager: SensorManager
+//    private var mAccelerometer = FloatArray(3)
+//    private var mGeomagneic = FloatArray(3)
+//    private var compassSensor: Sensor? = null
+//    private var acceleroSensor: Sensor? = null
 
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
@@ -116,9 +111,9 @@ class MainActivity : AppCompatActivity() {
         getAccessToken()
 
         // initialize each sensor used
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+//        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+//        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+//        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         locationManager = LocationManager(this)
         sharedPrefMananger = SharedPrefMananger(this)
@@ -343,24 +338,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startLocationUpdate() {
-        locationManager.startLocationUpdates(object: LocationListener {
+        locationManager.startLocationUpdates(object : LocationListener {
             override fun onLocationUpdate(location: Location) {
-                latitude = location.latitude
-                longitude = location.longitude
-//                bearing = location.bearing
+                val currentLatitude = location.latitude
+                val currentLongitude = location.longitude
+
+                if (lastLatitude != 0.0 && lastLongitude != 0.0) {
+                    bearing = calculateBearing(lastLatitude, lastLongitude, currentLatitude, currentLongitude)
+                    direction = Helper.bearingToDirection(bearing)
+                    updateBearingTextView()
+                }
+
+                latitude = currentLatitude
+                longitude = currentLongitude
                 speed = location.speed
-//                direction = Helper.bearingToDirection(location.bearing)
-                bearing = bearing
-                direction = Helper.bearingToDirection(bearing)
+
+                // Update the last known location
+                lastLatitude = currentLatitude
+                lastLongitude = currentLongitude
             }
         })
+    }
+
+    private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val deltaLon = lon2 - lon1
+        val deltaLat = lat2 - lat1
+
+        val angleRad = atan2(deltaLat, deltaLon)
+        var angleDeg = Math.toDegrees(angleRad)
+
+        // Adjusting the angle to ensure 0 degrees points to the right
+        angleDeg = (angleDeg + 360) % 360
+
+        return angleDeg.toFloat()
+    }
+
+    private fun updateBearingTextView() {
+        val bearingString = bearing.toString()
+        bearingTextView.text = "Current Bearing: $bearingString degrees"
     }
 
     private fun mapViewSetup() {
         val center = GeoPoint(-36.85571847211549, 174.7650322093214)
 
         val marker = Marker(binding.map)
-        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus2, null)
+        marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow, null) // Use custom drawable
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
 
         mapController = binding.map.controller as MapController
@@ -376,7 +398,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         updateMarkerPosition(marker)
-//        generatePolyline()
     }
 
     private fun generatePolyline(busRoute: BusRoute,busStop: BusStop) {
@@ -440,7 +461,7 @@ class MainActivity : AppCompatActivity() {
         val updateRunnable = object : Runnable {
             override fun run() {
                 marker.position = GeoPoint(latitude, longitude)
-                marker.rotation = bearing
+                marker.rotation = bearing // The bearing now correctly matches the polar coordinate system
                 binding.map.overlays.add(marker)
                 binding.map.invalidate()
                 publishTelemetryData()
@@ -591,7 +612,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("arrBusDataOnline2", arrBusData.toString())
         for (bus in arrBusData) {
             markerBus[bus.accessToken] = Marker(binding.map)
-            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow2, null) // Use custom drawable
             markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
     }
@@ -662,42 +683,37 @@ class MainActivity : AppCompatActivity() {
      * Listener for sensor changes, specifically for accelerometer and compass sensors.
      * Updates the bearing and direction based on sensor readings.
      */
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent?) {
-            val alpha = 0.97f
-            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
-                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
-                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
-            }
-            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
-                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
-                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
-            }
-            val r = FloatArray(9)
-            val i = FloatArray(9)
-
-            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
-            if (success) {
-                val orientation = FloatArray(3)
-                SensorManager.getOrientation(r, orientation)
-                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-                bearing = (bearing + 360) % 360
-                direction = Helper.bearingToDirection(bearing)
-                Log.d("bearing value:", bearing.toString())
-                updateBearingTextView()
-            }
-        }
-        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-            // TODO: handle accuracy
-        }
-    }
-
-    private fun updateBearingTextView() {
-        val bearingString = bearing.toString()
-        bearingTextView.text = "Current Bearing: $bearingString"
-    }
+//    private val sensorListener = object : SensorEventListener {
+//        override fun onSensorChanged(event: SensorEvent?) {
+//            val alpha = 0.97f
+//            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+//                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
+//                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
+//                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
+//            }
+//            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+//                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
+//                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
+//                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
+//            }
+//            val r = FloatArray(9)
+//            val i = FloatArray(9)
+//
+//            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
+//            if (success) {
+//                val orientation = FloatArray(3)
+//                SensorManager.getOrientation(r, orientation)
+//                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
+//                bearing = (bearing + 360) % 360
+//                direction = Helper.bearingToDirection(bearing)
+//                Log.d("bearing value:", bearing.toString())
+//                updateBearingTextView()
+//            }
+//        }
+//        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+//            // TODO: handle accuracy
+//        }
+//    }
 
     /**
      * Resumes sensor listeners when the activity is resumed.
@@ -707,16 +723,16 @@ class MainActivity : AppCompatActivity() {
         // unregister to avoid the sensor continuing to run
         // even though the application is not running
         // and to anticipate power usage
-        sensorManager.registerListener(
-            sensorListener,
-            compassSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-        sensorManager.registerListener(
-            sensorListener,
-            acceleroSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
+//        sensorManager.registerListener(
+//            sensorListener,
+//            compassSensor,
+//            SensorManager.SENSOR_DELAY_NORMAL
+//        )
+//        sensorManager.registerListener(
+//            sensorListener,
+//            acceleroSensor,
+//            SensorManager.SENSOR_DELAY_NORMAL
+//        )
     }
 
     /**
@@ -724,7 +740,7 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onPause() {
         super.onPause()
-        sensorManager.unregisterListener(sensorListener)
+//        sensorManager.unregisterListener(sensorListener)
     }
 
     /**

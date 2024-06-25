@@ -18,20 +18,19 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 object Helper {
-    fun bearingToDirection(bearingDegrees: Float): String {
-        val direction = when {
-            (bearingDegrees >= 337.5 || bearingDegrees < 22.5) -> "North"
-            (bearingDegrees >= 22.5 && bearingDegrees < 67.5) -> "Northeast"
-            (bearingDegrees >= 67.5 && bearingDegrees < 112.5) -> "East"
-            (bearingDegrees >= 112.5 && bearingDegrees < 157.5) -> "Southeast"
-            (bearingDegrees >= 157.5 && bearingDegrees < 202.5) -> "South"
-            (bearingDegrees >= 202.5 && bearingDegrees < 247.5) -> "Southwest"
-            (bearingDegrees >= 247.5 && bearingDegrees < 292.5) -> "West"
-            (bearingDegrees >= 292.5 && bearingDegrees < 337.5) -> "Northwest"
+
+    fun bearingToDirection(bearing: Float): String {
+        return when {
+            bearing == 0f || bearing == 360f -> "East"
+            bearing > 0f && bearing < 90f -> "North-East"
+            bearing == 90f -> "North"
+            bearing > 90f && bearing < 180f -> "North-West"
+            bearing == 180f -> "West"
+            bearing > 180f && bearing < 270f -> "South-West"
+            bearing == 270f -> "South"
+            bearing > 270f && bearing < 360f -> "South-East"
             else -> "Invalid Bearing"
         }
-
-        return direction
     }
 
     fun convertTimeToReadableFormat(timeInMillis: Long): String {
