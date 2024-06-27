@@ -67,7 +67,14 @@ object Helper {
         return 6371 * c // radius of the Earth in kilometers
     }
 
-    fun createBusStopSymbol(context: Context, busStopNumber: Int): Drawable {
+    fun createBusStopSymbol(context: Context, busStopNumber: Int, maxBusStopNumber: Int): Drawable {
+        // Determine the adjusted bus stop number
+        val adjustedNumber = when (busStopNumber) {
+            1 -> "S"
+            maxBusStopNumber -> "E"
+            else -> (busStopNumber - 1).toString()
+        }
+
         // create a custom drawable with the bus stop number
         val drawable = ContextCompat.getDrawable(context, R.drawable.ic_bus_stop) as BitmapDrawable
         val bitmap = Bitmap.createBitmap(
@@ -79,7 +86,7 @@ object Helper {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
 
-        // add the bus stop number to the right of the symbol
+        // add the adjusted bus stop number to the right of the symbol
         val textSize = 30f // adjust the text size as needed
         val paint = Paint().apply {
             color = Color.WHITE // set text color
@@ -87,7 +94,7 @@ object Helper {
             typeface = Typeface.DEFAULT_BOLD // set bold typeface
             setTextSize(textSize)
         }
-        val text = busStopNumber.toString()
+        val text = adjustedNumber
         val x = (canvas.width - paint.measureText(text)) / 2 // adjust the horizontal position to center the text
         val y = canvas.height - 10f // adjust the vertical position to position the text below the symbol
 
@@ -95,4 +102,5 @@ object Helper {
 
         return BitmapDrawable(context.resources, bitmap)
     }
+
 }

@@ -41,6 +41,7 @@ import com.jason.publisher.services.MqttManager
 import com.jason.publisher.services.NotificationManager
 import com.jason.publisher.services.SharedPrefMananger
 import com.jason.publisher.services.SoundManager
+import com.jason.publisher.utils.BusStopAssignment
 import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -505,7 +506,7 @@ class OfflineActivity : AppCompatActivity() {
             Log.d("BUS STOP", geoPoint.toString())
             val busStopNumber = index + 1
 //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
-            val busStopSymbol = createBusStopSymbol(applicationContext, busStopNumber)
+            val busStopSymbol = createBusStopSymbol(applicationContext, busStopNumber, busStop.size)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
@@ -698,6 +699,11 @@ class OfflineActivity : AppCompatActivity() {
         jsonObject.put("departureTime", departureTime)
         jsonObject.put("routeDirection", routeDirection)
         jsonObject.put("bus", busname)
+
+        // To publish the closest bus stop to the publisher device.
+        val closestBusStopToPubDevice = BusStopAssignment.getTheClosestBusStopToPubDevice(latitude, longitude);
+        jsonObject.put("closestBusStopToPubDevice:", closestBusStopToPubDevice)
+
         Log.d("bearingTelemetry", bearing.toString())
         Log.d("departureTimeTelemetry:", departureTime)
         Log.d("departureTimeShowTelemetry:", showDepartureTime)
