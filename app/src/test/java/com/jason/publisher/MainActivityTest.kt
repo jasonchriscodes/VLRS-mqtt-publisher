@@ -16,43 +16,56 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.whenever
 
-
+/**
+ * Unit tests for the MainActivity class.
+ */
 class MainActivityTest {
 
+    /**
+     * Sets up the test environment before each test.
+     */
     @Before
     fun setUp() {
         mockkObject(OfflineData)
         mockkObject(OnlineData)
     }
 
+    /**
+     * Cleans up the test environment after each test.
+     */
     @After
     fun tearDown() {
         unmockkAll()
     }
 
+    /**
+     * Tests the getAccessToken method when the configuration is found.
+     */
     @Test
     fun testGetAccessToken_ConfigFound() {
         val mockConfigList = listOf(
             BusItem(aid = "8d34bdc9a5c78c42", bus = "Bus A", accessToken = "z0MQXzmMsNZwiD9Pwn6J"),
             BusItem(aid = "2b039058a1a5f8a3", bus = "Bus B", accessToken = "YiSbp8zzJyt3htZ7ECI0")
         )
-
         every { OnlineData.getConfig() } returns mockConfigList
-
         val result = Utils.getAccessToken(mockConfigList, "8d34bdc9a5c78c42")
         assertEquals("z0MQXzmMsNZwiD9Pwn6J", result)
     }
 
+    /**
+     * Tests the getAccessToken method when the configuration is not found.
+     */
     @Test
     fun testGetAccessToken_ConfigNotFound() {
         val mockConfigList = listOf<BusItem>()
-
         every { OnlineData.getConfig() } returns mockConfigList
-
         val result = Utils.getAccessToken(mockConfigList, "8d34bdc9a5c78c42")
         assertNull(result)
     }
 
+    /**
+     * Tests the findBusNameByAid method when the aid is found.
+     */
     @Test
     fun findBusNameByAid_aidFound() {
         val aid = "8d34bdc9a5c78c42"
@@ -61,13 +74,14 @@ class MainActivityTest {
             BusItem(aid = "8d34bdc9a5c78c42", bus = "Bus A", accessToken = "z0MQXzmMsNZwiD9Pwn6J"),
             BusItem(aid = "2b039058a1a5f8a3", bus = "Bus B", accessToken = "YiSbp8zzJyt3htZ7ECI0")
         )
-
         every { OfflineData.getConfig() } returns mockConfigList
-
         val result = Utils.findBusNameByAid(aid)
         assertEquals(bus, result)
     }
 
+    /**
+     * Tests the findBusNameByAid method when the aid is null.
+     */
     @Test
     fun findBusNameByAid_isNull() {
         val aid: String? = null
@@ -75,6 +89,9 @@ class MainActivityTest {
         assertNull(result)
     }
 
+    /**
+     * Tests the findBusNameByAid method when the aid is not found.
+     */
     @Test
     fun findBusNameByAid_aidNotFound() {
         val aid = "Test"
@@ -105,6 +122,9 @@ class MainActivityTest {
         return normalizedBearing
     }
 
+    /**
+     * Tests the bearingToDirection method with various bearing values.
+     */
     @Test
     fun testBearingToDirection() {
         // North

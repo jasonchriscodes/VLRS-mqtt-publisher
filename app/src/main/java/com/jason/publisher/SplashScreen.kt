@@ -33,7 +33,6 @@ import org.json.JSONObject
  */
 @SuppressLint("CustomSplashScreen")
 class SplashScreen : AppCompatActivity() {
-//    private lateinit var mqttManager: MqttManager
     private lateinit var locationManager: LocationManager
     private lateinit var sharedPrefMananger: SharedPrefMananger
     private lateinit var modeSelectionDialog: ModeSelectionDialog
@@ -42,7 +41,6 @@ class SplashScreen : AppCompatActivity() {
     var name = ""
     private var accessToken = ""
     private var aaid = ""
-
     private var latitude = 0.0
     private var longitude = 0.0
     private var bearing = 0.0F
@@ -51,44 +49,21 @@ class SplashScreen : AppCompatActivity() {
 
     /**
      * Overrides the onCreate method to initialize the activity and perform necessary setup.
+     * @param savedInstanceState Bundle containing the activity's previously saved state, if any.
      */
     @SuppressLint("HardwareIds")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySplashScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         modeSelectionDialog = ModeSelectionDialog(this)
-
         aaid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //        Toast.makeText(this, aaid, Toast.LENGTH_LONG).show()
-        Log.d("aaid bus a:", aaid)
+//        Log.d("aaid bus a:", aaid)
         sharedPrefMananger = SharedPrefMananger(this)
-
-//        val colRef = db.collection("config").get()
-//        colRef.addOnSuccessListener { query ->
-//            for (doc in query.documents) {
-//                if (doc.data!!["aid"] == aaid) {
-//                    name = doc.data!!["name"].toString()
-//                    accessToken = doc.data!!["accessToken"].toString()
-//                    sharedPrefMananger.saveString(Constant.deviceNameKey, name)
-//                }
-//            }
-//        }
-
-        // initialize the MQTT manager with server URI and client ID
-//        mqttManager =
-//            MqttManager(serverUri = "tcp://43.226.218.94:1883", clientId = "jasonAndroidClientId")
         locationManager = LocationManager(this)
         startLocationUpdate()
-
         routeToNextScreen()
-
-        // subscribe to a MQTT topic for attribute responses and update UI accordingly
-//        mqttManager.subscribe(topic = "v1/devices/me/attributes/response/+") { message ->
-//            data = message
-//        }
-//        requestData()
     }
 
     /**
@@ -107,74 +82,21 @@ class SplashScreen : AppCompatActivity() {
         modeSelectionDialog.showModeSelectionDialog(object : ModeSelectionDialog.ModeSelectionListener {
             override fun onModeSelected(mode: String) {
                 var intent = Intent(this@SplashScreen, MainActivity::class.java)
-//                val busData: BusData
                 if (mode == "Offline") {
                     intent = Intent(this@SplashScreen, OfflineActivity::class.java)
-//                    busData = getRoutesAndStops(true)
-                } else {
-//                    busData = getRoutesAndStops(false)
                 }
-//                Log.d("busdata: ", busData.toString())
-//                intent.putExtra(Constant.busDataKey, busData)
                 intent.putExtra(Constant.deviceNameKey, name)
                 intent.putExtra(Constant.tokenKey, accessToken)
                 intent.putExtra(Constant.aidKey, aaid)
-
                 intent.putExtra("lat", latitude)
                 intent.putExtra("lng", longitude)
                 intent.putExtra("ber", bearing)
                 intent.putExtra("spe", speed)
                 intent.putExtra("dir", direction)
-
-//                mqttManager.disconnect()
                 startActivity(intent)
                 finish()
             }
         })
-    }
-
-    /**
-     * Retrieves routes and stops based on the selected mode.
-     */
-    private fun getRoutesAndStops(isOffline: Boolean): BusData {
-        val routesAndStops = HashMap<String, Any>()
-        val gson = Gson()
-        var busDto: BusData
-        val busData = gson.fromJson(data, Bus::class.java)
-        val busses = busData.shared!!.config!!.busConfig
-        for (bus in busses) {
-            if (bus.aid == aaid) {
-                accessToken = bus.accessToken
-                name = bus.bus
-            }
-        }
-                Log.d("arraybus: ", busses.toString())
-        if (isOffline) {
-            routesAndStops["routes"] = busData.shared!!.busRoute1!!.jsonMember1!! + busData.shared.busRoute1!!.jsonMember1!!
-            routesAndStops["stops"] = busData.shared.busStop1!!.jsonMember1!!
-            routesAndStops["sharedBus"] = busses
-            routesAndStops["bearing"] = busData.shared.bearing!!
-            Log.d("Check bearing",busData.shared.bearingCustomer.toString())
-            busDto = BusData(
-                busData.shared!!.busRoute1!!,
-                busData.shared.busStop1!!,
-                busses,
-                busData.shared.bearing,
-                busData.shared.bearingCustomer
-            )
-        } else {
-            routesAndStops["routes"] = busData.shared!!.busRoute!!
-            routesAndStops["stops"] = busData.shared.busStop!!
-            routesAndStops["sharedBus"] = busses
-            busDto = BusData(
-                busData.shared!!.busRoute1!!,
-                busData.shared.busStop1!!,
-                busses,
-                null,
-                null
-            )
-        }
-        return busDto
     }
 
     /**
@@ -203,15 +125,4 @@ class SplashScreen : AppCompatActivity() {
             )
         }
     }
-
-    /**
-     * Publishes a request for necessary attributes.
-     */
-    private fun requestData() {
-        val jsonObject = JSONObject()
-        jsonObject.put("sharedKeys", "busRoute,busStop,busRoute2,busStop2,config,bearing,bearingCustomer")
-        val jsonString = jsonObject.toString()
-//        mqttManager.publish("v1/devices/me/attributes/request/5", jsonString)
-    }
-
 }

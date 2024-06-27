@@ -11,11 +11,22 @@ import com.jason.publisher.AdapterClasses.SectionsPagerAdapter
 import com.jason.publisher.R
 import com.jason.publisher.databinding.FragmentContentBinding
 
+/**
+ * A simple [Fragment] subclass representing the main content with tabs for Chat, Call, and Profile.
+ */
 class ContentFragment : Fragment() {
     private var _binding: FragmentContentBinding? = null
     private val binding get() = _binding!!
     private var isSearch = false
 
+    /**
+     * Called to have the fragment instantiate its user interface view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state as given here.
+     * @return Return the View for the fragment's UI.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -24,6 +35,12 @@ class ContentFragment : Fragment() {
         return binding.root
     }
 
+    /**
+     * Called immediately after onCreateView has returned, but before any saved state has been restored in to the view.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state as given here.
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -47,6 +64,10 @@ class ContentFragment : Fragment() {
         }
     }
 
+    /**
+     * Called when the view previously created by onCreateView has been detached from the fragment.
+     * This is where you should clean up resources related to the binding.
+     */
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

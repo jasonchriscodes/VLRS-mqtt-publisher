@@ -17,8 +17,17 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/**
+ * Object containing helper functions used throughout the application.
+ */
 object Helper {
 
+    /**
+     * Converts a bearing angle to a compass direction.
+     *
+     * @param bearing The bearing angle in degrees.
+     * @return The compass direction as a string.
+     */
     fun bearingToDirection(bearing: Float): String {
         return when {
             bearing == 0f || bearing == 360f -> "East"
@@ -33,6 +42,12 @@ object Helper {
         }
     }
 
+    /**
+     * Converts a timestamp to a readable format.
+     *
+     * @param timeInMillis The timestamp in milliseconds.
+     * @return The formatted date and time as a string.
+     */
     fun convertTimeToReadableFormat(timeInMillis: Long): String {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = timeInMillis
@@ -46,6 +61,16 @@ object Helper {
         return "$dayOfWeek, $timeOfDay"
     }
 
+    /**
+     * Calculates the speed between two geographical points given the time delay.
+     *
+     * @param firstLat The latitude of the first point.
+     * @param firstLong The longitude of the first point.
+     * @param secondLat The latitude of the second point.
+     * @param secondLong The longitude of the second point.
+     * @param delayInMillis The time delay in milliseconds.
+     * @return The calculated speed in meters per second.
+     */
     fun calculateSpeed(
         firstLat: Double,
         firstLong: Double,
@@ -57,6 +82,15 @@ object Helper {
         return (distance * 1000 / (delayInMillis / 1000)).toFloat()
     }
 
+    /**
+     * Calculates the distance between two geographical points using the Haversine formula.
+     *
+     * @param lat1 The latitude of the first point.
+     * @param lon1 The longitude of the first point.
+     * @param lat2 The latitude of the second point.
+     * @param lon2 The longitude of the second point.
+     * @return The distance between the points in kilometers.
+     */
     private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val deltaLat = Math.toRadians(lat2 - lat1)
         val deltaLon = Math.toRadians(lon2 - lon1)
@@ -67,6 +101,14 @@ object Helper {
         return 6371 * c // radius of the Earth in kilometers
     }
 
+    /**
+     * Creates a custom drawable with the bus stop number.
+     *
+     * @param context The application context.
+     * @param busStopNumber The bus stop number.
+     * @param maxBusStopNumber The maximum bus stop number.
+     * @return A drawable with the bus stop symbol and number.
+     */
     fun createBusStopSymbol(context: Context, busStopNumber: Int, maxBusStopNumber: Int): Drawable {
         // Determine the adjusted bus stop number
         val adjustedNumber = when (busStopNumber) {

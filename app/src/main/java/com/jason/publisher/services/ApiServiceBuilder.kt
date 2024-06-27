@@ -16,6 +16,8 @@ object ApiServiceBuilder {
 
     /**
      * Builds a service instance for the specified service interface.
+     *
+     * @param T The type of the service interface.
      * @param service The service interface class.
      * @return An instance of the specified service interface.
      */

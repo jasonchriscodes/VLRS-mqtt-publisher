@@ -14,6 +14,9 @@ import com.jason.publisher.databinding.FragmentChatBinding
 import com.jason.publisher.model.Contact
 import com.jason.publisher.services.SharedPrefMananger
 
+/**
+ * A simple [Fragment] subclass representing the chat list screen.
+ */
 class ChatFragment : Fragment() {
     private var _binding: FragmentChatBinding? = null
     private val binding get() = _binding!!
@@ -21,6 +24,14 @@ class ChatFragment : Fragment() {
     private val db = Firebase.firestore
     private lateinit var sharedPrefMananger: SharedPrefMananger
 
+    /**
+     * Called to have the fragment instantiate its user interface view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state as given here.
+     * @return Return the View for the fragment's UI.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -29,6 +40,12 @@ class ChatFragment : Fragment() {
         return binding.root
     }
 
+    /**
+     * Called immediately after onCreateView has returned, but before any saved state has been restored in to the view.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state as given here.
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sharedPrefMananger = SharedPrefMananger(requireContext())
@@ -36,6 +53,9 @@ class ChatFragment : Fragment() {
         setRecyclerList()
     }
 
+    /**
+     * Sets up the RecyclerView with contact messages.
+     */
     private fun setRecyclerList() {
         binding.rvChat.setHasFixedSize(true)
         binding.rvChat.layoutManager = LinearLayoutManager(requireContext())
@@ -43,6 +63,9 @@ class ChatFragment : Fragment() {
         binding.rvChat.adapter = listChatAdapter
     }
 
+    /**
+     * Retrieves the list of chat contacts from Firestore.
+     */
     private fun getListChat() {
         val deviceName = sharedPrefMananger.getString(Constant.deviceNameKey, "")
         db.collection("config").get()
@@ -61,6 +84,10 @@ class ChatFragment : Fragment() {
             }
     }
 
+    /**
+     * Called when the view previously created by onCreateView has been detached from the fragment.
+     * This is where you should clean up resources related to the binding.
+     */
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

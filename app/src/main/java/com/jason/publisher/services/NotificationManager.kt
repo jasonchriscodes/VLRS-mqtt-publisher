@@ -7,10 +7,21 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.jason.publisher.R
 
+/**
+ * Class responsible for managing notifications.
+ *
+ * @param context The application context.
+ */
 class NotificationManager(private val context: Context) {
 
     private val channelName = "My Channel"
 
+    /**
+     * Creates a notification channel.
+     *
+     * @param channelId The ID of the notification channel.
+     * @param isMessage Boolean indicating if the notification is a message.
+     */
     private fun createNotificationChannel(channelId: String, isMessage: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance =
@@ -30,6 +41,15 @@ class NotificationManager(private val context: Context) {
         }
     }
 
+    /**
+     * Shows a notification.
+     *
+     * @param channelId The ID of the notification channel.
+     * @param notificationId The ID of the notification.
+     * @param title The title of the notification.
+     * @param message The message content of the notification.
+     * @param isMessage Boolean indicating if the notification is a message.
+     */
     fun showNotification(
         channelId: String,
         notificationId: Int,

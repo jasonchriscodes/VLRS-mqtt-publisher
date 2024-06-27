@@ -30,6 +30,9 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.Marker
 
+/**
+ * Activity for live tracking and displaying real-time data on a map.
+ */
 class LiveActivity: AppCompatActivity() {
     private lateinit var binding: ActivityLiveBinding
     private lateinit var mapController: MapController
@@ -44,8 +47,6 @@ class LiveActivity: AppCompatActivity() {
 //  Live Mode
     private var latitude: Double? = -36.8557154
     private var longitude: Double? = 174.7649233
-//    private var latitude: Double? = 0.0
-//    private var longitude: Double? = 0.0
     private var bearing = 0.0F
     private var speed = 0.0F
     private var direction = ""
@@ -55,7 +56,9 @@ class LiveActivity: AppCompatActivity() {
     var username: String? = null
     var clientId: String? = null
 
-    // handle location permission request result
+    /**
+     * Handles location permission request result.
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -72,6 +75,9 @@ class LiveActivity: AppCompatActivity() {
         }
     }
 
+    /**
+     * Initializes the activity, sets up the map, location updates, and MQTT manager.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLiveBinding.inflate(layoutInflater)
@@ -102,6 +108,9 @@ class LiveActivity: AppCompatActivity() {
         }
     }
 
+    /**
+     * Starts location updates.
+     */
     private fun startLocationUpdate() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -125,6 +134,9 @@ class LiveActivity: AppCompatActivity() {
         }
     }
 
+    /**
+     * Publishes device info periodically.
+     */
     private fun publishDeviceInfo() {
         val handler = Handler(Looper.getMainLooper())
         val updateRunnable = object : Runnable {
@@ -141,20 +153,21 @@ class LiveActivity: AppCompatActivity() {
                 } else {
                     message = "{\"latitude\":0.0, \"longitude\":0.0, \"bearing\":0.0,  \"direction\":North,  \"speed\":0.0}"
                 }
-
                 showNotification()
                 mqttManager.publish(
                     topic = "v1/devices/me/telemetry",
                     message = message,
                     qos = 1
                 )
-
                 handler.postDelayed(this, 1000)
             }
         }
         handler.post(updateRunnable)
     }
 
+    /**
+     * Shows a notification with the current location and direction.
+     */
     private fun showNotification() {
         val notificationManageer = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -177,19 +190,18 @@ class LiveActivity: AppCompatActivity() {
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             // handle permission for post notifications here if needed
             return
         }
         NotificationManagerCompat.from(this).notify(1, builder.build())
     }
 
+    /**
+     * Converts a bearing angle to a compass direction.
+     *
+     * @param bearingDegrees The bearing angle in degrees.
+     * @return The compass direction as a string.
+     */
     private fun bearingToDirection(bearingDegrees: Float): String {
         val direction = when {
             (bearingDegrees >= 337.5 || bearingDegrees < 22.5) -> "North"
@@ -206,6 +218,9 @@ class LiveActivity: AppCompatActivity() {
         return direction
     }
 
+    /**
+     * Retrieves configuration data from the intent.
+     */
     private fun getConfigData() {
          args = intent.getStringExtra(Constant.busDataKey)
          deviceName = intent.getStringExtra(Constant.deviceNameKey)
@@ -213,13 +228,15 @@ class LiveActivity: AppCompatActivity() {
          clientId = intent.getStringExtra(Constant.aidKey)
     }
 
+    /**
+     * Configures the map settings and initializes the marker.
+     */
     private fun mapConfiguration() {
         with(binding.map) {
             setMultiTouchControls(true)
             setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
             zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
         }
-
         marker = Marker(binding.map)
         marker.icon= resources.getDrawable(R.drawable.ic_bus)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)

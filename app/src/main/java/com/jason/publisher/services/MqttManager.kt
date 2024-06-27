@@ -7,6 +7,13 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
+/**
+ * Class responsible for managing MQTT connections, publishing, and subscribing to topics.
+ *
+ * @param serverUri The URI of the MQTT server.
+ * @param clientId The client ID to use for the connection.
+ * @param username The username for the MQTT connection (default is "cngz9qqls7dk5zgi3y4j").
+ */
 class MqttManager(
     serverUri: String,
     clientId: String,
@@ -30,10 +37,22 @@ class MqttManager(
         }
     }
 
+    /**
+     * Checks if the MQTT client is connected.
+     *
+     * @return True if connected, false otherwise.
+     */
     fun isMqttConnect(): Boolean {
         return mqttClient.isConnected
     }
 
+    /**
+     * Publishes a message to a specified topic.
+     *
+     * @param topic The topic to publish to.
+     * @param message The message to publish.
+     * @param qos The Quality of Service level for the message (default is 0).
+     */
     fun publish(topic: String, message: String, qos: Int = 0) {
         try {
             Log.d("mqtt manager", "publish method call")
@@ -47,6 +66,12 @@ class MqttManager(
         }
     }
 
+    /**
+     * Subscribes to a specified topic and sets a callback to handle incoming messages.
+     *
+     * @param topic The topic to subscribe to.
+     * @param callback The callback to handle incoming messages.
+     */
     fun subscribe(topic: String, callback: (String) -> Unit) {
         mqttClient.subscribe(topic) { _, msg ->
             val payload = String(msg.payload)
@@ -54,12 +79,18 @@ class MqttManager(
         }
     }
 
-    // disconnect from the MQTT broker
+    /**
+     * Disconnects from the MQTT broker.
+     */
     fun disconnect() {
         mqttClient.disconnect()
     }
 
-    // Getter for username
+    /**
+     * Gets the username used for the MQTT connection.
+     *
+     * @return The username.
+     */
     fun getUsername(): String {
         return username
     }

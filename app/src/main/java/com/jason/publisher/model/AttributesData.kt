@@ -2,9 +2,11 @@ package com.jason.publisher.model
 
 /**
  * Data class representing attributes data, including latitude, longitude, bearing, speed, and direction.
+ *
  * @property latitude The latitude coordinate.
  * @property longitude The longitude coordinate.
  * @property bearing The bearing angle.
+ * @property bearingCustomer The customer-specific bearing angle.
  * @property speed The speed value.
  * @property direction The direction value.
  */
