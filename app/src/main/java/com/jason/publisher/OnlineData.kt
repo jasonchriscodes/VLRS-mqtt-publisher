@@ -4,15 +4,23 @@ import com.jason.publisher.model.BusItem
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 
+/**
+ * Object that provides online data for bus configurations.
+ */
 object OnlineData {
 
+    /**
+     * Retrieves a list of BusItem objects representing the bus configuration.
+     * The configuration is hardcoded as a JSON string.
+     *
+     * @return List of BusItem representing the bus configuration.
+     */
     fun getConfig() : List<BusItem> {
         val jsonString = """
             {"busConfig":[{"aid":"8d34bdc9a5c78c42","bus":"Bus A","accessToken":"z0MQXzmMsNZwiD9Pwn6J"},{"aid":"2b039058a1a5f8a3","bus":"Bus B","accessToken":"YiSbp8zzJyt3htZ7ECI0"},{"aid":"02372ba208415152","bus":"Bus C","accessToken":"kTmTKRd11CPX7RhXTVZY"}]}
         """.trimIndent()
 
         val configurationBus = mutableListOf<BusItem>()
-
         val jsonObject = JSONObject(jsonString)
         val jsonArray = jsonObject.getJSONArray("busConfig")
 

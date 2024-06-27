@@ -1,8 +1,12 @@
 package com.jason.publisher.model
 
-// A data class to represent geographical coordinates (latitude and longitude).
+/**
+ * A data class to represent geographical coordinates (latitude and longitude).
+ *
+ * @property latitude Latitude value in degrees.
+ * @property longitude Longitude value in degrees.
+ */
 data class Coordinate(
-    val latitude: Double,   // Latitude value in degrees.
-    val longitude: Double   // Longitude value in degrees.
+    val latitude: Double,
+    val longitude: Double
 )
-

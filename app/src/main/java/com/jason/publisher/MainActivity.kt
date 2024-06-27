@@ -52,8 +52,6 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.lang.Math.atan2
-import java.lang.Math.cos
-import java.lang.Math.sin
 
 class MainActivity : AppCompatActivity() {
 
@@ -79,12 +77,6 @@ class MainActivity : AppCompatActivity() {
     private var totalMessage = 0
 
     private var token = ""
-//    private lateinit var sensorManager: SensorManager
-//    private var mAccelerometer = FloatArray(3)
-//    private var mGeomagneic = FloatArray(3)
-//    private var compassSensor: Sensor? = null
-//    private var acceleroSensor: Sensor? = null
-
     private var apiService = ApiServiceBuilder.buildService(ApiService::class.java)
     private var markerBus = HashMap<String, Marker>()
     private var arrBusData = OnlineData.getConfig()
@@ -103,24 +95,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // Initialize the bearingTextView
         bearingTextView = findViewById(R.id.bearingTextView)
-
         Configuration.getInstance().load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
         getAccessToken()
-
-        // initialize each sensor used
-//        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-//        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-//        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         locationManager = LocationManager(this)
         sharedPrefMananger = SharedPrefMananger(this)
         notificationManager = NotificationManager(this)
         soundManager = SoundManager(this)
-
-//        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
 
         getDefaultConfigValue()
         mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
@@ -132,9 +114,6 @@ class MainActivity : AppCompatActivity() {
         sendRequestAttributes()
 
         binding.chatButton.setOnClickListener {
-//            val intent = Intent(this, ChatActivity::class.java)
-//            startActivity(intent)
-
             showChatDialog()
         }
         // Set up spinner
@@ -149,6 +128,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Retrieves the access token for the current device's Android ID from the configuration list.
+     */
     @SuppressLint("HardwareIds")
     private fun getAccessToken() {
         val listConfig = OnlineData.getConfig()
@@ -195,8 +177,8 @@ class MainActivity : AppCompatActivity() {
                 hoursDeparture = hoursPicker.value
                 minutesDeparture = minutesPicker.value
                 showDepartureTime = spinner.selectedItem.toString()
-                Log.d("departureTimeDialog", showDepartureTime)
-                publishShowDepartureTime() // Added to publish the show departure time
+//                Log.d("departureTimeDialog", showDepartureTime)
+                publishShowDepartureTime()
                 publishDepartureTime()
                 // Start the countdown timer
                 startCountdown()
@@ -224,17 +206,20 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Subscribes to shared data from the server.
+     */
     private fun subscribeSharedData() {
         mqttManager.subscribe(SUB_MSG_TOPIC) { message ->
-            Log.d("Message from admin",message)
+//            Log.d("Message from admin",message)
             runOnUiThread {
                 val gson = Gson()
                 val data = gson.fromJson(message, Bus::class.java)
                 val msg = data.shared?.message
                 val route = data.shared?.busRoute1
                 val stops = data.shared?.busStop1
-                Log.d(" Check message", message.toString())
-                Log.d(" Check route", route?.jsonMember1.toString())
+//                Log.d(" Check message", message.toString())
+//                Log.d(" Check route", route?.jsonMember1.toString())
                 if (firstTime) {
                     if (route != null) {
                         if (stops != null) {
@@ -253,6 +238,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Displays a notification for a new message from the admin.
+     * @param message The message content.
+     */
     private fun showNotification(message: String) {
         notificationManager.showNotification(
             channelId = "channel2",
@@ -264,6 +253,10 @@ class MainActivity : AppCompatActivity() {
         soundManager.playSound(SOUND_FILE_NAME)
     }
 
+    /**
+     * Saves a new message into shared preferences and updates message count.
+     * @param message The message content.
+     */
     private fun saveNewMessage(message: String) {
         sharedPrefMananger.saveString(LAST_MSG_KEY, message)
         lastMessage = sharedPrefMananger.getString(LAST_MSG_KEY, "").toString()
@@ -278,7 +271,6 @@ class MainActivity : AppCompatActivity() {
         }
         messageList.add(newMessage)
         sharedPrefMananger.saveMessageList(MSG_KEY, messageList)
-
         getMessageCount()
     }
 
@@ -326,7 +318,6 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
-
             override fun onFailure(call: Call<Void>, t: Throwable) {
                 Toast.makeText(
                     this@MainActivity,
@@ -337,6 +328,9 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Starts updating the location periodically.
+     */
     private fun startLocationUpdate() {
         locationManager.startLocationUpdates(object : LocationListener {
             override fun onLocationUpdate(location: Location) {
@@ -360,6 +354,15 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Calculates the bearing between two geographical points.
+     *
+     * @param lat1 The latitude of the first point.
+     * @param lon1 The longitude of the first point.
+     * @param lat2 The latitude of the second point.
+     * @param lon2 The longitude of the second point.
+     * @return The bearing between the two points in degrees.
+     */
     private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val deltaLon = lon2 - lon1
         val deltaLat = lat2 - lat1
@@ -373,11 +376,17 @@ class MainActivity : AppCompatActivity() {
         return angleDeg.toFloat()
     }
 
+    /**
+     * Updates the bearing text view with the current bearing.
+     */
     private fun updateBearingTextView() {
         val bearingString = bearing.toString()
         bearingTextView.text = "Current Bearing: $bearingString degrees"
     }
 
+    /**
+     * Sets up the map view and initializes markers and polylines.
+     */
     private fun mapViewSetup() {
         val center = GeoPoint(-36.85571847211549, 174.7650322093214)
 
@@ -396,33 +405,26 @@ class MainActivity : AppCompatActivity() {
             setMultiTouchControls(true)
             getLocalVisibleRect(Rect())
         }
-
         updateMarkerPosition(marker)
     }
 
+    /**
+     * Generates polylines and markers for the bus route and stops.
+     *
+     * @param busRoute The bus route data.
+     * @param busStop The bus stop data.
+     */
     private fun generatePolyline(busRoute: BusRoute,busStop: BusStop) {
-//        val busRoute = OfflineData.getRoutesOffline()
-//        val busStop = OfflineData.getBusStopOffline()
-//        val busData = intent.getSerializableExtra(Constant.busDataKey) as HashMap<*, *>
-//        val routes = busData["routes"] as BusRoute
-//        routes.jsonMember1!!.forEach {
-//            busRoute.add(GeoPoint(it!!.latitude!!, it.longitude!!))
-//        }
-//        val stops = busData["stops"] as BusStop
-//        stops.jsonMember1!!.forEach {
-//            busStop.add(GeoPoint(it!!.latitude!!, it.longitude!!))
-//        }
         val routes = mutableListOf<GeoPoint>()
         for (route in busRoute.jsonMember1!!) {
             routes.add(GeoPoint(route!!.latitude!!, route.longitude!!))
         }
-        Log.d("Check test","test")
-        Log.d("Check Length Route",routes.size.toString())
+//        Log.d("Check test","test")
+//        Log.d("Check Length Route",routes.size.toString())
 
         val overlayItems = ArrayList<OverlayItem>()
         busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-            //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
             val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber,  busStop.jsonMember1.size)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
@@ -438,7 +440,6 @@ class MainActivity : AppCompatActivity() {
                 override fun onItemSingleTapUp(index: Int, item: OverlayItem?): Boolean {
                     return true
                 }
-
                 override fun onItemLongPress(index: Int, item: OverlayItem?): Boolean {
                     return false
                 }
@@ -456,6 +457,11 @@ class MainActivity : AppCompatActivity() {
         binding.map.invalidate()
     }
 
+    /**
+     * Updates the position of the marker on the map and publishes telemetry data.
+     *
+     * @param marker The marker to be updated.
+     */
     private fun updateMarkerPosition(marker: Marker) {
         val handler = Handler(Looper.getMainLooper())
         val updateRunnable = object : Runnable {
@@ -472,6 +478,9 @@ class MainActivity : AppCompatActivity() {
         handler.post(updateRunnable)
     }
 
+    /**
+     * Updates the client attributes by posting the current location, bearing, speed, and direction data to the server.
+     */
     private fun updateClientAttributes() {
         val url = ApiService.BASE_URL + "$token/attributes"
         val attributesData = AttributesData(latitude, longitude, bearing, null,speed, direction)
@@ -482,18 +491,17 @@ class MainActivity : AppCompatActivity() {
         )
         call.enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                Log.d("Client Attributes", response.message().toString())
-                Log.d("Client Attributes", response.code().toString())
-                Log.d("Client Attributes", response.errorBody().toString())
+//                Log.d("Client Attributes", response.message().toString())
+//                Log.d("Client Attributes", response.code().toString())
+//                Log.d("Client Attributes", response.errorBody().toString())
                 if (response.isSuccessful) {
-                    Log.d("Client Attributes", "Successfull")
+//                    Log.d("Client Attributes", "Successfull")
                 } else {
-                    Log.d("Client Attributes", "Fail")
+//                    Log.d("Client Attributes", "Fail")
                 }
             }
-
             override fun onFailure(call: Call<Void>, t: Throwable) {
-                Log.d("Client Attributes", t.message.toString())
+//                Log.d("Client Attributes", t.message.toString())
             }
         })
     }
@@ -512,7 +520,7 @@ class MainActivity : AppCompatActivity() {
                 val minutes = (millisUntilFinished / (1000 * 60)) % 60
                 val seconds = (millisUntilFinished / 1000) % 60
                 departureTime = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-                Log.d("departureTime", departureTime)
+//                Log.d("departureTime", departureTime)
             }
 
             override fun onFinish() {
@@ -522,12 +530,15 @@ class MainActivity : AppCompatActivity() {
         timer.start()
     }
 
+    /**
+     * Publishes telemetry data including latitude, longitude, bearing, speed, direction, and other relevant information.
+     */
     private fun publishTelemetryData() {
         val aid = intent.getStringExtra(Constant.aidKey)
         val jsonObject = JSONObject()
         val busname = Utils.findBusNameByAid(aid)
         if (busname != null) {
-            Log.d("busname", busname)
+//            Log.d("busname", busname)
         }
         jsonObject.put("latitude", latitude)
         jsonObject.put("longitude", longitude)
@@ -538,7 +549,7 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("showDepartureTime", showDepartureTime)
         jsonObject.put("departureTime", departureTime)
         jsonObject.put("bus", busname)
-        Log.d("BusConfig", busConfig)
+//        Log.d("BusConfig", busConfig)
         val jsonString = jsonObject.toString()
         mqttManager.publish(PUB_POS_TOPIC, jsonString, 1)
         notificationManager.showNotification(
@@ -577,7 +588,7 @@ class MainActivity : AppCompatActivity() {
     private fun publishShowDepartureTime(){
         val jsonObject = JSONObject()
         jsonObject.put("showDepartureTime", showDepartureTime)
-        Log.d("ShowDepartureTime", showDepartureTime)
+//        Log.d("ShowDepartureTime", showDepartureTime)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
@@ -588,11 +599,14 @@ class MainActivity : AppCompatActivity() {
     private fun publishDepartureTime(){
         val jsonObject = JSONObject()
         jsonObject.put("departureTime", departureTime)
-        Log.d("ShowDepartureTime", showDepartureTime)
+//        Log.d("ShowDepartureTime", showDepartureTime)
         val jsonString = jsonObject.toString()
         mqttManager.publish(MainActivity.PUB_POS_TOPIC, jsonString, 1)
     }
 
+    /**
+     * Retrieves default configuration values for the activity, such as latitude, longitude, bearing, and more.
+     */
     private fun getDefaultConfigValue() {
         latitude = intent.getDoubleExtra("lat", 0.0)
         longitude = intent.getDoubleExtra("lng", 0.0)
@@ -603,13 +617,10 @@ class MainActivity : AppCompatActivity() {
 
         val aid = intent.getStringExtra(Constant.aidKey)
         busConfig = intent.getStringExtra(Constant.deviceNameKey).toString()
-
-//        token = intent.getStringExtra(Constant.tokenKey).toString()
-
-        Log.d("arrBusDataOnline1", arrBusData.toString())
-        Log.d("aidOnline", aid.toString())
+//        Log.d("arrBusDataOnline1", arrBusData.toString())
+//        Log.d("aidOnline", aid.toString())
         arrBusData = arrBusData.filter { it.aid != aid }
-        Log.d("arrBusDataOnline2", arrBusData.toString())
+//        Log.d("arrBusDataOnline2", arrBusData.toString())
         for (bus in arrBusData) {
             markerBus[bus.accessToken] = Marker(binding.map)
             markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow2, null) // Use custom drawable
@@ -634,10 +645,14 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Retrieves attributes data for each bus from the server.
+     *
+     * @param apiService The API service instance.
+     * @param token The access token for authentication.
+     * @param clientKeys The keys to request attributes for.
      */
     private fun getAttributes(apiService: ApiService, token: String, clientKeys: String) {
-        Log.d("getAttribute: ", "test1")
-        Log.d("token: ", token)
+//        Log.d("getAttribute: ", "test1")
+//        Log.d("token: ", token)
         val call = apiService.getAttributes(
             "${ApiService.BASE_URL}$token/attributes",
             "application/json",
@@ -645,14 +660,14 @@ class MainActivity : AppCompatActivity() {
         )
         call.enqueue(object : Callback<ClientAttributesResponse> {
             override fun onResponse(call: Call<ClientAttributesResponse>, response: Response<ClientAttributesResponse>) {
-                Log.d("Attribute Data", response.body().toString())
+//                Log.d("Attribute Data", response.body().toString())
                 if (response.isSuccessful) {
                     if (response.body()?.client != null){
                         val lat = response.body()?.client?.latitude ?: 0.0
                         val lon = response.body()!!.client.longitude
                         val ber = response.body()!!.client.bearing
                         val berCus = response.body()!!.client.bearingCustomer
-                        Log.d( "Check Data", "$lat $lon")
+//                        Log.d( "Check Data", "$lat $lon")
                         for (bus in arrBusData) {
                             if (token == bus.accessToken) {
                                 markerBus[token]!!.position = GeoPoint(lat, lon)
@@ -664,75 +679,29 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 } else {
-                    Log.d("request data bus", response.message().toString())
+//                    Log.d("request data bus", response.message().toString())
                 }
             }
 
             override fun onFailure(call: Call<ClientAttributesResponse>, t: Throwable) {
-                Log.d("","")
+//                Log.d("","")
             }
         })
     }
 
+    /**
+     * Retrieves the total message count from shared preferences.
+     */
     private fun getMessageCount() {
         totalMessage = sharedPrefMananger.getMessageList(MSG_KEY).size
         binding.notificationBadge.text = totalMessage.toString()
     }
 
     /**
-     * Listener for sensor changes, specifically for accelerometer and compass sensors.
-     * Updates the bearing and direction based on sensor readings.
-     */
-//    private val sensorListener = object : SensorEventListener {
-//        override fun onSensorChanged(event: SensorEvent?) {
-//            val alpha = 0.97f
-//            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-//                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
-//                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
-//                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
-//            }
-//            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-//                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
-//                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
-//                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
-//            }
-//            val r = FloatArray(9)
-//            val i = FloatArray(9)
-//
-//            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
-//            if (success) {
-//                val orientation = FloatArray(3)
-//                SensorManager.getOrientation(r, orientation)
-//                bearing = Math.toDegrees((orientation[0] * -1).toDouble()).toFloat()
-//                bearing = (bearing + 360) % 360
-//                direction = Helper.bearingToDirection(bearing)
-//                Log.d("bearing value:", bearing.toString())
-//                updateBearingTextView()
-//            }
-//        }
-//        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-//            // TODO: handle accuracy
-//        }
-//    }
-
-    /**
      * Resumes sensor listeners when the activity is resumed.
      */
     override fun onResume() {
         super.onResume()
-        // unregister to avoid the sensor continuing to run
-        // even though the application is not running
-        // and to anticipate power usage
-//        sensorManager.registerListener(
-//            sensorListener,
-//            compassSensor,
-//            SensorManager.SENSOR_DELAY_NORMAL
-//        )
-//        sensorManager.registerListener(
-//            sensorListener,
-//            acceleroSensor,
-//            SensorManager.SENSOR_DELAY_NORMAL
-//        )
     }
 
     /**
@@ -740,7 +709,6 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onPause() {
         super.onPause()
-//        sensorManager.unregisterListener(sensorListener)
     }
 
     /**
@@ -752,6 +720,10 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    /**
+     * Companion object holding constant values used throughout the activity.
+     * Includes server URI, client ID, MQTT topics, and other constants.
+     */
     companion object {
         const val SERVER_URI = "tcp://43.226.218.94:1883"
         const val CLIENT_ID = "jasonAndroidClientId"
