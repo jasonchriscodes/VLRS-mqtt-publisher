@@ -3,6 +3,8 @@ package com.jason.publisher
 import com.jason.publisher.model.BusBearing
 import com.jason.publisher.model.BusBearingCustomer
 import com.jason.publisher.model.BusItem
+import com.jason.publisher.model.BusStop
+import com.jason.publisher.model.BusStopInfo
 import org.json.JSONArray
 import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
@@ -102,6 +104,137 @@ object OfflineData {
             bearingCustomerBus.add(BusBearingCustomer(bearing))
         }
         return bearingCustomerBus
+    }
+
+    fun getBusStopOfflineWithName() : List<BusStopInfo> {
+        val jsonString = """
+           {
+  "1": [
+    {
+      "latitude": -36.78125,
+      "longitude": 175.007,
+      "bus-stop-name": "1",
+      "distance-to-next-stop": 436
+    },
+    {
+      "latitude": -36.78316,
+      "longitude": 175.01086,
+      "bus-stop-name": "2",
+      "distance-to-next-stop": 3731
+    },
+    {
+      "latitude": -36.79871,
+      "longitude": 175.03447,
+      "bus-stop-name": "3",
+      "distance-to-next-stop": 1348
+    },
+    {
+      "latitude": -36.79569,
+      "longitude": 175.04737,
+      "bus-stop-name": "4",
+      "distance-to-next-stop": 2115
+    },
+    {
+      "latitude": -36.80121,
+      "longitude": 175.06579,
+      "bus-stop-name": "5",
+      "distance-to-next-stop": 374
+    },
+    {
+      "latitude": -36.80069,
+      "longitude": 175.06972,
+      "bus-stop-name": "6",
+      "distance-to-next-stop": 559
+    },
+    {
+      "latitude": -36.79867,
+      "longitude": 175.07527,
+      "bus-stop-name": "7",
+      "distance-to-next-stop": 1688
+    },
+    {
+      "latitude": -36.78842,
+      "longitude": 175.08302,
+      "bus-stop-name": "8",
+      "distance-to-next-stop": 2262
+    },
+    {
+      "latitude": -36.8014,
+      "longitude": 175.06984,
+      "bus-stop-name": "9",
+      "distance-to-next-stop": 361
+    },
+    {
+      "latitude": -36.80169,
+      "longitude": 175.06619,
+      "bus-stop-name": "10",
+      "distance-to-next-stop": 3595
+    },
+    {
+      "latitude": -36.81456,
+      "longitude": 175.08249,
+      "bus-stop-name": "11",
+      "distance-to-next-stop": 2187
+    },
+    {
+      "latitude": -36.80916,
+      "longitude": 175.06174,
+      "bus-stop-name": "12",
+      "distance-to-next-stop": 2319
+    },
+    {
+      "latitude": -36.79621,
+      "longitude": 175.04829,
+      "bus-stop-name": "13",
+      "distance-to-next-stop": 1789
+    },
+    {
+      "latitude": -36.79699,
+      "longitude": 175.03212,
+      "bus-stop-name": "14",
+      "distance-to-next-stop": 2858
+    },
+    {
+      "latitude": -36.78385,
+      "longitude": 175.01139,
+      "bus-stop-name": "15",
+      "distance-to-next-stop": 2286
+    },
+    {
+      "latitude": -36.79159,
+      "longitude": 174.99938,
+      "bus-stop-name": "16",
+      "distance-to-next-stop": 886
+    },
+    {
+      "latitude": -36.78724,
+      "longitude": 175.00125,
+      "bus-stop-name": "17",
+      "distance-to-next-stop": 2002
+    },
+    {
+      "latitude": -36.78012,
+      "longitude": 174.99216,
+      "bus-stop-name": "S/E",
+      "distance-to-next-stop": 1447
+    }
+  ]
+}
+        """.trimIndent()
+        val busStops = mutableListOf<BusStopInfo>()
+
+        val jsonObject = JSONObject(jsonString)
+        val jsonArray = jsonObject.getJSONArray("1")
+
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.getJSONObject(i)
+            val busStopName = item.getString("bus-stop-name")
+            val latitude = item.getDouble("latitude")
+            val longitude = item.getDouble("longitude")
+            val distanceToNextStop = item.getDouble("distance-to-next-stop")
+            busStops.add(BusStopInfo(busStopName, latitude, longitude, distanceToNextStop))
+        }
+        return busStops
     }
 }
 

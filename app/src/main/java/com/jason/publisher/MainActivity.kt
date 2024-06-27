@@ -423,7 +423,7 @@ class MainActivity : AppCompatActivity() {
         busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
             //            val busStopSymbol = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_stop, null)
-            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber)
+            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber,  busStop.jsonMember1.size)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
