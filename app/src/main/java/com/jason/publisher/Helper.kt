@@ -131,7 +131,7 @@ object Helper {
         // add the adjusted bus stop number to the right of the symbol
         val textSize = 30f // adjust the text size as needed
         val paint = Paint().apply {
-            color = Color.WHITE // set text color
+            color = Color.CYAN // set text color
             isFakeBoldText = true // enable bold text
             typeface = Typeface.DEFAULT_BOLD // set bold typeface
             setTextSize(textSize)
