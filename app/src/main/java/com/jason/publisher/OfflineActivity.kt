@@ -126,7 +126,7 @@ class OfflineActivity : AppCompatActivity() {
         Configuration.getInstance()
             .load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
 
-        // initialize each service used
+        // Initialize each service used
         getAccessToken()
         mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
         sharedPrefMananger = SharedPrefMananger(this)
@@ -140,7 +140,12 @@ class OfflineActivity : AppCompatActivity() {
 
         busMarker = Marker(binding.map)
         mapController = binding.map.controller as MapController
-        getBusRouteData()
+
+        // Initialize busRoute and busStop using OfflineData
+        busRoute = OfflineData.getRoutesOffline()
+        busStop = OfflineData.getBusStopOffline()
+        calculatedBearings = calculateBearings()
+
         val center = GeoPoint(busRoute[0].latitude, busRoute[0].longitude)
         mapController.setCenter(center)
         mapController.setZoom(18.0)
@@ -165,14 +170,14 @@ class OfflineActivity : AppCompatActivity() {
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
             binding.popUpButton.setImageDrawable(getDrawable(R.drawable.ic_refresh))
-            if(!isFirstTime){
+            if (!isFirstTime) {
                 showPopUpDialog()
-            } else
-            {
+            } else {
                 this.recreate()
             }
         }
     }
+
 
     /**
      * Retrieves the access token for the current device's Android ID from the configuration list.
@@ -379,43 +384,53 @@ class OfflineActivity : AppCompatActivity() {
         getMessageCount() // calculate total message
     }
 
-    /**
-     * Starts updating the bus location on the map.
-     */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun startLocationUpdate() {
+        if (busRoute.isEmpty()) {
+            Log.e("OfflineActivity", "Bus route is empty, cannot update location.")
+            return
+        }
+
         latitude = busRoute[routeIndex].latitude
         longitude = busRoute[routeIndex].longitude
-        PolarCoordinateToBearing(latitude,longitude,latitude,longitude)
+        PolarCoordinateToBearing(latitude, longitude, latitude, longitude)
         generatePolyline()
         generateBusStop()
 
         val handler = Handler(Looper.getMainLooper())
-        var updateRunnable = object : Runnable {
+        val updateRunnable = object : Runnable {
             override fun run() {
-                val currentLatitude = busRoute[routeIndex].latitude
-                val currentLongitude = busRoute[routeIndex].longitude
+                // Ensure routeIndex is within the bounds of busRoute
+                if (routeIndex < busRoute.size) {
+                    val currentLatitude = busRoute[routeIndex].latitude
+                    val currentLongitude = busRoute[routeIndex].longitude
 
-                if (lastLatitude != 0.0 && lastLongitude != 0.0) {
-                    bearing = calculateBearing(lastLatitude, lastLongitude, currentLatitude, currentLongitude)
-                    direction = Helper.bearingToDirection(bearing)
-                    updateBearingTextView()
+                    if (lastLatitude != 0.0 && lastLongitude != 0.0) {
+                        bearing = calculateBearing(lastLatitude, lastLongitude, currentLatitude, currentLongitude)
+                        direction = Helper.bearingToDirection(bearing)
+                        updateBearingTextView()
+                    }
+
+                    latitude = currentLatitude
+                    longitude = currentLongitude
+                    // Calculate speed if index is not at the beginning
+                    if (routeIndex != 0) {
+                        speed = Random.nextFloat() * 10f + 50f
+                    }
+
+                    // Update the last known location
+                    lastLatitude = currentLatitude
+                    lastLongitude = currentLongitude
+                    routeIndex = (routeIndex + 1) % busRoute.size // Ensure routeIndex wraps around correctly
+                    handler.postDelayed(this, PUBLISH_POSITION_TIME)
+                } else {
+                    Log.e("OfflineActivity", "routeIndex $routeIndex out of bounds for busRoute size ${busRoute.size}")
                 }
-
-                latitude = currentLatitude
-                longitude = currentLongitude
-                // Calculate speed if index is not at the beginning
-                if (routeIndex != 0) {
-                    speed = Random.nextFloat() * 10f + 50f
-                }
-
-                // Update the last known location
-                lastLatitude = currentLatitude
-                lastLongitude = currentLongitude
-                handler.postDelayed(this, PUBLISH_POSITION_TIME)
-            }}
+            }
+        }
         handler.post(updateRunnable)
     }
+
 
     /**
      * Calculates the bearing between two geographical points.
@@ -469,46 +484,6 @@ class OfflineActivity : AppCompatActivity() {
     }
 
     /**
-     * Retrieves bus route data from a JSON file and initializes route data.
-     */
-    private fun getBusRouteData() {
-        try {
-            val stream = assets.open("busRoute.json")
-            val size = stream.available()
-            val buffer = ByteArray(size)
-            stream.read(buffer)
-            stream.close()
-
-            val strContent = String(buffer, StandardCharsets.UTF_8)
-            val gson = Gson()
-            val typeToken = object : TypeToken<Map<String, List<Coordinate>>>() {}.type
-            routeData = gson.fromJson(strContent, typeToken)
-
-            val fromList = ArrayList<Int>()
-            val toList = ArrayList<Int>()
-            for (i in 1..1) {
-                fromList.add(i)
-            }
-            for (i in 2..2) {
-                toList.add(i)
-            }
-
-            for (index in fromList) {
-                routeData["$index"]?.forEach { position ->
-                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-            for (index in toList) {
-                routeData["$index"]?.forEach { position ->
-                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-        } catch (e: IOException) {
-            Log.e("Get Data JSON Asset", e.toString())
-        }
-    }
-
-    /**
      * Generates markers for bus stops on the map.
      */
     private fun generateBusStop() {
@@ -541,39 +516,20 @@ class OfflineActivity : AppCompatActivity() {
         binding.map.overlays.add(overlayItem)
     }
 
+
     /**
      * Generates polylines for bus route segments on the map.
      */
     private fun generatePolyline() {
         try {
-            val routePolylineFrom = Polyline(binding.map)
-            val routePolylineTo = Polyline(binding.map)
+            val routePolyline = Polyline(binding.map)
+            routePolyline.color = Color.BLUE
 
-            val fromList = ArrayList<Int>()
-            val toList = ArrayList<Int>()
-            for (i in 1..1) {
-                fromList.add(i)
-            }
-            for (i in 2..2) {
-                toList.add(i)
+            for (point in busRoute) {
+                routePolyline.addPoint(point)
             }
 
-            routePolylineFrom.color = Color.BLUE
-            routePolylineTo.color = Color.RED
-
-            for (index in fromList) {
-                routeData["$index"]?.forEach { position ->
-                    routePolylineFrom.addPoint(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-            for (index in toList) {
-                routeData["$index"]?.forEach { position ->
-                    routePolylineTo.addPoint(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-
-            binding.map.overlays.add(routePolylineFrom)
-            binding.map.overlays.add(routePolylineTo)
+            binding.map.overlays.add(routePolyline)
         } catch (ignored: IOException) {
             Toast.makeText(
                 this,
