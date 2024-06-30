@@ -74,7 +74,6 @@ class OfflineActivity : AppCompatActivity() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var soundManager: SoundManager
     private lateinit var mapController: MapController
-    private lateinit var routeData: Map<String, List<Coordinate>>
     private lateinit var busMarker: Marker
     private lateinit var bearingTextView: TextView
 
