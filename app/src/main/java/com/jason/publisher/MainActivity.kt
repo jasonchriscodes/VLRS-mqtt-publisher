@@ -388,7 +388,7 @@ class MainActivity : AppCompatActivity() {
      * Sets up the map view and initializes markers and polylines.
      */
     private fun mapViewSetup() {
-        val center = GeoPoint(-36.85571847211549, 174.7650322093214)
+        val center = GeoPoint(-36.780120000000004, 174.99216)
 
         val marker = Marker(binding.map)
         marker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow, null) // Use custom drawable
@@ -411,25 +411,25 @@ class MainActivity : AppCompatActivity() {
     /**
      * Generates polylines and markers for the bus route and stops.
      *
-     * @param busRoute The bus route data.
-     * @param busStop The bus stop data.
+     * @param busRoute The bus route data in the new format.
+     * @param busStops The bus stop data in the new format.
      */
-    private fun generatePolyline(busRoute: BusRoute,busStop: BusStop) {
+    private fun generatePolyline(busRoute: List<BusRoute>, busStops: List<BusStop>) {
         val routes = mutableListOf<GeoPoint>()
-        for (route in busRoute.jsonMember1!!) {
-            routes.add(GeoPoint(route!!.latitude!!, route.longitude!!))
+        for (route in busRoute) {
+            routes.add(GeoPoint(route.latitude!!, route.longitude!!))
         }
-//        Log.d("Check test","test")
-//        Log.d("Check Length Route",routes.size.toString())
+        Log.d("Route Polylines",routes.toString())
+        Log.d("Check Length Route",routes.size.toString())
 
         val overlayItems = ArrayList<OverlayItem>()
-        busStop.jsonMember1?.forEachIndexed { index, geoPoint ->
+        busStops.forEachIndexed { index, geoPoint ->
             val busStopNumber = index + 1
-            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber,  busStop.jsonMember1.size)
+            val busStopSymbol = Helper.createBusStopSymbol(applicationContext, busStopNumber, busStops.size)
             val marker = OverlayItem(
                 "Bus Stop $busStopNumber",
                 "Description",
-                GeoPoint(geoPoint!!.latitude!!, geoPoint.longitude!!)
+                GeoPoint(geoPoint.latitude!!, geoPoint.longitude!!)
             )
             marker.setMarker(busStopSymbol)
             overlayItems.add(marker)
