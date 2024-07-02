@@ -20,6 +20,7 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.NumberPicker
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -73,9 +74,11 @@ class OfflineActivity : AppCompatActivity() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var soundManager: SoundManager
     private lateinit var mapController: MapController
-    private lateinit var routeData: Map<String, List<Coordinate>>
     private lateinit var busMarker: Marker
+    private lateinit var bearingTextView: TextView
 
+    private var lastLatitude = 0.0
+    private var lastLongitude = 0.0
     private var latitude = 0.0
     private var longitude = 0.0
     private var bearing = 0.0F
@@ -87,19 +90,12 @@ class OfflineActivity : AppCompatActivity() {
     private var routeIndex = 0 // Initialize index at the start
     private var busRoute = OfflineData.getRoutesOffline()
     private var busStop = OfflineData.getBusStopOffline()
-    private var busBearing = OfflineData.getBearing()
-    private var busBearingCustomer = OfflineData.getBearingCustomer()
+    private var calculatedBearings = calculateBearings()
 
     private var lastMessage = ""
     private var totalMessage = 0
 
     private var token = ""
-    private lateinit var sensorManager: SensorManager
-    private var mAccelerometer = FloatArray(3)
-    private var mGeomagneic = FloatArray(3)
-    private var compassSensor: Sensor? = null
-    private var acceleroSensor: Sensor? = null
-
     private var hoursDeparture = 0
     private var minutesDeparture = 0
     private var showDepartureTime = "Yes"
@@ -123,15 +119,13 @@ class OfflineActivity : AppCompatActivity() {
         binding = ActivityOfflineBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initialize the bearingTextView
+        bearingTextView = findViewById(R.id.bearingTextView)
+
         Configuration.getInstance()
             .load(this, getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE))
 
-        // initialize each sensor used
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        compassSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-        acceleroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-
-        // initialize each service used
+        // Initialize each service used
         getAccessToken()
         mqttManager = MqttManager(serverUri = SERVER_URI, clientId = CLIENT_ID, username = token)
         sharedPrefMananger = SharedPrefMananger(this)
@@ -145,7 +139,12 @@ class OfflineActivity : AppCompatActivity() {
 
         busMarker = Marker(binding.map)
         mapController = binding.map.controller as MapController
-        getBusRouteData()
+
+        // Initialize busRoute and busStop using OfflineData
+        busRoute = OfflineData.getRoutesOffline()
+        busStop = OfflineData.getBusStopOffline()
+        calculatedBearings = calculateBearings()
+
         val center = GeoPoint(busRoute[0].latitude, busRoute[0].longitude)
         mapController.setCenter(center)
         mapController.setZoom(18.0)
@@ -170,14 +169,14 @@ class OfflineActivity : AppCompatActivity() {
         // Set click listener for pop-up button
         binding.popUpButton.setOnClickListener {
             binding.popUpButton.setImageDrawable(getDrawable(R.drawable.ic_refresh))
-            if(!isFirstTime){
+            if (!isFirstTime) {
                 showPopUpDialog()
-            } else
-            {
+            } else {
                 this.recreate()
             }
         }
     }
+
 
     /**
      * Retrieves the access token for the current device's Android ID from the configuration list.
@@ -384,85 +383,103 @@ class OfflineActivity : AppCompatActivity() {
         getMessageCount() // calculate total message
     }
 
-    /**
-     * Starts updating the bus location on the map.
-     */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun startLocationUpdate() {
-        var isForward =
-            true // Flag to indicate the direction of movement, true for forward, false for backward
+        if (busRoute.isEmpty()) {
+            Log.e("OfflineActivity", "Bus route is empty, cannot update location.")
+            return
+        }
 
         latitude = busRoute[routeIndex].latitude
         longitude = busRoute[routeIndex].longitude
-        PolarCoordinateToBearing(latitude,longitude,latitude,longitude)
-        val stops = busStop
+        PolarCoordinateToBearing(latitude, longitude, latitude, longitude)
         generatePolyline()
         generateBusStop()
 
         val handler = Handler(Looper.getMainLooper())
-        var updateRunnable = object : Runnable {
+        val updateRunnable = object : Runnable {
             override fun run() {
-                latitude = busRoute[routeIndex].latitude
-                longitude = busRoute[routeIndex].longitude
+                // Ensure routeIndex is within the bounds of busRoute
+                if (routeIndex < busRoute.size) {
+                    val currentLatitude = busRoute[routeIndex].latitude
+                    val currentLongitude = busRoute[routeIndex].longitude
 
-                // Calculate speed if index is not at the beginning
-                if (routeIndex != 0) {
-                    speed = Random.nextFloat() * 10f + 50f
-                }
-
-                // Determine the direction of index movement
-                    routeIndex++
-                    if (routeIndex == busRoute.size - 1) {
-                        isForward = false // Change direction to backward if reached upper limit
+                    if (lastLatitude != 0.0 && lastLongitude != 0.0) {
+                        bearing = calculateBearing(lastLatitude, lastLongitude, currentLatitude, currentLongitude)
+                        direction = Helper.bearingToDirection(bearing)
+                        updateBearingTextView()
                     }
-//                    Log.d("routeDirectionIF", routeIndex.toString())
-                // coordinates backward route starting from 123
-                if (routeIndex > 122){
-                    routeDirection = "backward"
+
+                    latitude = currentLatitude
+                    longitude = currentLongitude
+                    // Calculate speed if index is not at the beginning
+                    if (routeIndex != 0) {
+                        speed = Random.nextFloat() * 10f + 50f
+                    }
+
+                    // Update the last known location
+                    lastLatitude = currentLatitude
+                    lastLongitude = currentLongitude
+                    routeIndex = (routeIndex + 1) % busRoute.size // Ensure routeIndex wraps around correctly
+                    handler.postDelayed(this, PUBLISH_POSITION_TIME)
+                } else {
+                    Log.e("OfflineActivity", "routeIndex $routeIndex out of bounds for busRoute size ${busRoute.size}")
                 }
-                handler.postDelayed(this, PUBLISH_POSITION_TIME)
-            }}
+            }
+        }
         handler.post(updateRunnable)
     }
 
+
     /**
-     * Retrieves bus route data from a JSON file and initializes route data.
+     * Calculates the bearing between two geographical points.
+     *
+     * @param lat1 The latitude of the first point.
+     * @param lon1 The longitude of the first point.
+     * @param lat2 The latitude of the second point.
+     * @param lon2 The longitude of the second point.
+     * @return The bearing between the two points in degrees.
      */
-    private fun getBusRouteData() {
-        try {
-            val stream = assets.open("busRoute.json")
-            val size = stream.available()
-            val buffer = ByteArray(size)
-            stream.read(buffer)
-            stream.close()
+    private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val deltaLon = lon2 - lon1
+        val deltaLat = lat2 - lat1
 
-            val strContent = String(buffer, StandardCharsets.UTF_8)
-            val gson = Gson()
-            val typeToken = object : TypeToken<Map<String, List<Coordinate>>>() {}.type
-            routeData = gson.fromJson(strContent, typeToken)
+        val angleRad = atan2(deltaLat, deltaLon)
+        var angleDeg = Math.toDegrees(angleRad)
 
-            val fromList = ArrayList<Int>()
-            val toList = ArrayList<Int>()
-            for (i in 1..1) {
-                fromList.add(i)
-            }
-            for (i in 2..2) {
-                toList.add(i)
-            }
+        // Adjusting the angle to ensure 0 degrees points to the right
+        angleDeg = (angleDeg + 360) % 360
 
-            for (index in fromList) {
-                routeData["$index"]?.forEach { position ->
-                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
-                }
+        return angleDeg.toFloat()
+    }
+
+    /**
+     * Calculates bearings for each consecutive pair of points in the bus route.
+     *
+     * @return List of Float representing the bearings.
+     */
+    private fun calculateBearings(): List<Float> {
+        val bearings = mutableListOf<Float>()
+        if (busRoute.size > 1) {
+            for (i in 0 until busRoute.size - 1) {
+                val bearing = calculateBearing(
+                    busRoute[i].latitude,
+                    busRoute[i].longitude,
+                    busRoute[i + 1].latitude,
+                    busRoute[i + 1].longitude
+                )
+                bearings.add(bearing)
             }
-            for (index in toList) {
-                routeData["$index"]?.forEach { position ->
-                    busRoute.plus(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-        } catch (e: IOException) {
-            Log.e("Get Data JSON Asset", e.toString())
         }
+        return bearings
+    }
+
+    /**
+     * Updates the bearing text view with the current bearing.
+     */
+    private fun updateBearingTextView() {
+        val bearingString = bearing.toString()
+        bearingTextView.text = "Current Bearing: $bearingString degrees"
     }
 
     /**
@@ -498,39 +515,20 @@ class OfflineActivity : AppCompatActivity() {
         binding.map.overlays.add(overlayItem)
     }
 
+
     /**
      * Generates polylines for bus route segments on the map.
      */
     private fun generatePolyline() {
         try {
-            val routePolylineFrom = Polyline(binding.map)
-            val routePolylineTo = Polyline(binding.map)
+            val routePolyline = Polyline(binding.map)
+            routePolyline.color = Color.BLUE
 
-            val fromList = ArrayList<Int>()
-            val toList = ArrayList<Int>()
-            for (i in 1..1) {
-                fromList.add(i)
-            }
-            for (i in 2..2) {
-                toList.add(i)
+            for (point in busRoute) {
+                routePolyline.addPoint(point)
             }
 
-            routePolylineFrom.color = Color.BLUE
-            routePolylineTo.color = Color.RED
-
-            for (index in fromList) {
-                routeData["$index"]?.forEach { position ->
-                    routePolylineFrom.addPoint(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-            for (index in toList) {
-                routeData["$index"]?.forEach { position ->
-                    routePolylineTo.addPoint(GeoPoint(position.latitude, position.longitude))
-                }
-            }
-
-            binding.map.overlays.add(routePolylineFrom)
-            binding.map.overlays.add(routePolylineTo)
+            binding.map.overlays.add(routePolyline)
         } catch (ignored: IOException) {
             Toast.makeText(
                 this,
@@ -548,7 +546,7 @@ class OfflineActivity : AppCompatActivity() {
     private fun mapViewSetup() {
         binding.map.overlays.remove(busMarker)
         binding.map.invalidate()
-        busMarker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus2, null)
+        busMarker.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow, null)
         busMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         updateMarkerPosition()
         routeIndex = 0
@@ -567,25 +565,24 @@ class OfflineActivity : AppCompatActivity() {
 //                Log.d("attributesData", attributesData.toString())
                 postAttributes(apiService, mqttManager.getUsername(), attributesData)
 //                Log.d("Mqttmanager", mqttManager.getUsername())
-                busMarker.position = GeoPoint(latitude, longitude)
-                busMarker.rotation =  busBearing[routeIndex].bearing!!.toFloat()
-                bearing = busBearing[routeIndex].bearing!!.toFloat()
+                if (routeIndex < calculatedBearings.size) {
+                    busMarker.position = GeoPoint(latitude, longitude)
+                    busMarker.rotation = calculatedBearings[routeIndex]
+                    bearing = calculatedBearings[routeIndex]
+                    bearingCustomer = calculatedBearings[routeIndex]
+                    direction = Helper.bearingToDirection(bearing)
+                }
 //                Log.d("Check Array", busBearingCustomer.isEmpty().toString())
 //                Log.d("Check Index", routeIndex.toString())
 //                Log.d("Check Index", busBearingCustomer.toString())
-                bearingCustomer = busBearingCustomer[routeIndex].bearingCustomer!!.toFloat()
 //                Log.d("bearingUpdateMarker", bearing.toString())
-                direction = Helper.bearingToDirection(bearing)
                 binding.map.overlays.add(busMarker)
                 binding.map.invalidate()
                 publishTelemetryData()
                 updateClientAttributes()
 //                Log.d("updateMarker", "")
-                if (routeIndex == busBearing.lastIndex) {
-                    routeIndex = 0
-                } else {
-                    handler.postDelayed(this, PUBLISH_POSITION_TIME)
-                }
+                routeIndex = (routeIndex + 1) % calculatedBearings.size
+                handler.postDelayed(this, PUBLISH_POSITION_TIME)
             }
         }
         handler.post(updateRunnable)
@@ -608,9 +605,9 @@ class OfflineActivity : AppCompatActivity() {
 //                Log.d("Client Attributes", response.code().toString())
 //                Log.d("Client Attributes", response.errorBody().toString())
                 if (response.isSuccessful) {
-//                    Log.d("Client Attributes", "Berhasil")
+//                    Log.d("Client Attributes", "Successfull")
                 } else {
-//                    Log.d("Client Attributes", "Gagal")
+//                    Log.d("Client Attributes", "Fail")
                 }
             }
 
@@ -830,7 +827,7 @@ class OfflineActivity : AppCompatActivity() {
 //        Log.d("arrBusDataOffline2", arrBusData.toString())
         for (bus in arrBusData) {
             markerBus[bus.accessToken] = Marker(binding.map)
-            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus, null)
+            markerBus[bus.accessToken]!!.icon = ResourcesCompat.getDrawable(resources, R.drawable.ic_bus_arrow2, null)
             markerBus[bus.accessToken]!!.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         }
 //        Log.d("Marker Bus",markerBus.toString())
@@ -902,66 +899,6 @@ class OfflineActivity : AppCompatActivity() {
         // sets the value of the textview
         // based on the length of the stored arraylist
         totalMessage = sharedPrefMananger.getMessageList(MSG_KEY).size
-    }
-
-    /**
-     * Listener for sensor changes, specifically for accelerometer and compass sensors.
-     * Updates the bearing and direction based on sensor readings.
-     */
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent?) {
-            val alpha = 0.97f
-            if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                mAccelerometer[0] = alpha * mAccelerometer[0] + (1 - alpha) * event.values[0]
-                mAccelerometer[1] = alpha * mAccelerometer[1] + (1 - alpha) * event.values[1]
-                mAccelerometer[2] = alpha * mAccelerometer[2] + (1 - alpha) * event.values[2]
-            }
-            if (event.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
-                mGeomagneic[0] = alpha * mGeomagneic[0] + (1 - alpha) * event.values[0]
-                mGeomagneic[1] = alpha * mGeomagneic[1] + (1 - alpha) * event.values[1]
-                mGeomagneic[2] = alpha * mGeomagneic[2] + (1 - alpha) * event.values[2]
-            }
-            val r = FloatArray(9)
-            val i = FloatArray(9)
-
-            val success = SensorManager.getRotationMatrix(r, i, mAccelerometer, mGeomagneic)
-            if (success) {
-                val orientation = FloatArray(3)
-                SensorManager.getOrientation(r, orientation)
-            }
-        }
-
-        override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-            // TODO: handle accuracy
-        }
-    }
-
-    /**
-     * Resumes sensor listeners when the activity is resumed.
-     */
-    override fun onResume() {
-        super.onResume()
-        // unregister to avoid the sensor continuing to run
-        // even though the application is not running
-        // and to anticipate power usage
-        sensorManager.registerListener(
-            sensorListener,
-            compassSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-        sensorManager.registerListener(
-            sensorListener,
-            acceleroSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-    }
-
-    /**
-     * Pauses sensor listeners when the activity is paused.
-     */
-    override fun onPause() {
-        super.onPause()
-        sensorManager.unregisterListener(sensorListener)
     }
 
     /**

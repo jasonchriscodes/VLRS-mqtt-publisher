@@ -60,21 +60,17 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:layout_editor_absoluteY="80dp" />
 
-<!--    <TextView-->
-<!--        android:id="@+id/notificationBadge"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginEnd="30dp"-->
-<!--        android:background="@drawable/badge_background"-->
-<!--        android:elevation="10dp"-->
-<!--        android:paddingStart="4dp"-->
-<!--        android:paddingTop="2dp"-->
-<!--        android:paddingEnd="4dp"-->
-<!--        android:paddingBottom="2dp"-->
-<!--        android:text="0"-->
-<!--        android:textColor="#FFFFFF"-->
-<!--        android:textSize="12sp"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="@+id/chatButton" />-->
+    <!-- TextView to display bearing -->
+    <TextView
+        android:id="@+id/bearingTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="Bearing: 0.0"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

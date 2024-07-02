@@ -35,10 +35,8 @@ data class JsonMember1Item(
 /**
  * Data class representing shared data.
  *
- * @property busStop1 The first bus stop data.
- * @property busRoute1 The first bus route data.
- * @property busStop The second bus stop data.
- * @property busRoute The second bus route data.
+ * @property busStop1 The list of bus stop data in the new format.
+ * @property busRoute1 The list of bus route data in the new format.
  * @property message The message related to the bus.
  * @property config The bus configuration data.
  * @property bearing The list of bus bearing data.
@@ -46,18 +44,17 @@ data class JsonMember1Item(
  */
 @Parcelize
 data class Shared(
-
     @field:SerializedName("busStop")
-    val busStop1: BusStop? = null,
+    val busStop1: List<BusStop>? = null,
 
     @field:SerializedName("busRoute")
-    val busRoute1: BusRoute? = null,
+    val busRoute1: List<BusRoute>? = null,
 
     @field:SerializedName("busStop2")
-    val busStop: BusStop? = null,
+    val busStop: List<BusStop>? = null,
 
     @field:SerializedName("busRoute2")
-    val busRoute: BusRoute? = null,
+    val busRoute: List<BusRoute>? = null,
 
     @field:SerializedName("message")
     val message: String? = null,
@@ -127,33 +124,31 @@ data class BusItem(
 ) : Parcelable
 
 /**
- * Data class representing bus stop data.
+ * Data class representing bus stop data in the new format.
  *
- * @property jsonMember1 The first list of bus stop items.
- * @property jsonMember2 The second list of bus stop items.
+ * @property latitude The latitude of the bus stop.
+ * @property longitude The longitude of the bus stop.
  */
 @Parcelize
 data class BusStop(
+    @field:SerializedName("latitude")
+    val latitude: Double? = null,
 
-    @field:SerializedName("1")
-    val jsonMember1: List<JsonMember1Item?>? = null,
-
-    @field:SerializedName("2")
-    val jsonMember2: List<JsonMember1Item?>? = null
+    @field:SerializedName("longitude")
+    val longitude: Double? = null
 ) : Parcelable
 
 /**
- * Data class representing bus route data.
+ * Data class representing bus route data in the new format.
  *
- * @property jsonMember1 The first list of bus route items.
- * @property jsonMember2 The second list of bus route items.
+ * @property latitude The latitude of the bus route point.
+ * @property longitude The longitude of the bus route point.
  */
 @Parcelize
 data class BusRoute(
+    @field:SerializedName("latitude")
+    val latitude: Double? = null,
 
-    @field:SerializedName("1")
-    val jsonMember1: List<JsonMember1Item?>? = null,
-
-    @field:SerializedName("2")
-    val jsonMember2: List<JsonMember1Item?>? = null
+    @field:SerializedName("longitude")
+    val longitude: Double? = null
 ) : Parcelable
