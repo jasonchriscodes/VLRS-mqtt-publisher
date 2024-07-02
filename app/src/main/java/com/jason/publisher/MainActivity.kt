@@ -730,7 +730,7 @@ class MainActivity : AppCompatActivity() {
         const val PUB_POS_TOPIC = "v1/devices/me/telemetry"
         private const val SUB_MSG_TOPIC = "v1/devices/me/attributes/response/+"
         private const val PUB_MSG_TOPIC = "v1/devices/me/attributes/request/1"
-        private const val REQUEST_PERIODIC_TIME = 1000L
+        private const val REQUEST_PERIODIC_TIME = 5000L
         private const val PUBLISH_POSITION_TIME = 1000L
         private const val LAST_MSG_KEY = "lastMessageKey"
         private const val MSG_KEY = "messageKey"
