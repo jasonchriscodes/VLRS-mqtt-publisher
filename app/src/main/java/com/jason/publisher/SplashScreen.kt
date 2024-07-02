@@ -5,12 +5,14 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.view.animation.AnimationUtils
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -58,12 +60,17 @@ class SplashScreen : AppCompatActivity() {
         setContentView(binding.root)
         modeSelectionDialog = ModeSelectionDialog(this)
         aaid = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//        Toast.makeText(this, aaid, Toast.LENGTH_LONG).show()
-//        Log.d("aaid bus a:", aaid)
         sharedPrefMananger = SharedPrefMananger(this)
         locationManager = LocationManager(this)
         startLocationUpdate()
         routeToNextScreen()
+
+        // Start animation
+        val logoExplorer = findViewById<ImageView>(R.id.logoExplorer)
+        val logoFullers = findViewById<ImageView>(R.id.logoFullers)
+        val animation = AnimationUtils.loadAnimation(this, R.anim.fade_in)
+        logoExplorer.startAnimation(animation)
+        logoFullers.startAnimation(animation)
     }
 
     /**
